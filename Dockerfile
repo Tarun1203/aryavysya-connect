@@ -2,6 +2,8 @@
 FROM node:24-slim AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
+# Prisma's migration engine needs OpenSSL, which the slim image lacks
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies (postinstall runs `prisma generate`, so the schema must be present)
 FROM base AS deps
@@ -26,7 +28,7 @@ COPY --from=build --chown=app:app /app/prisma ./prisma
 # The seed script (run on boot) imports src/lib/db.ts via the tsconfig "@/" alias
 COPY --from=build --chown=app:app /app/tsconfig.json ./
 COPY --from=build --chown=app:app /app/src/generated ./src/generated
-COPY --from=build --chown=app:app /app/src/lib/db.ts ./src/lib/db.ts
+COPY --from=build --chown=app:app /app/src/lib/db.ts /app/src/lib/db-url.ts ./src/lib/
 COPY --from=build --chown=app:app /app/scripts/start.sh ./scripts/start.sh
 USER app
 EXPOSE 3000
