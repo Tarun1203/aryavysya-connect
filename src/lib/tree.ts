@@ -4,7 +4,14 @@ import { db } from "@/lib/db";
 const personInclude = { gotra: true } as const;
 
 export async function getFamily(personId: string) {
-  const person = await db.person.findUnique({ where: { id: personId }, include: { ...personInclude, district: true, user: true } });
+  const person = await db.person.findUnique({ where: { id: personId }, include: {
+      ...personInclude,
+      district: true,
+      user: true,
+      nativeLocality: { include: { taluk: true, district: true } },
+      birthLocality: { include: { taluk: true, district: true } },
+    },
+  });
   if (!person) return null;
 
   const [parentLinks, childLinks, couples] = await Promise.all([

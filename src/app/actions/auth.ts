@@ -6,6 +6,7 @@ import { redirect } from "@/i18n/navigation";
 import { db } from "@/lib/db";
 import { endSession, hashPassword, startSession, verifyPassword } from "@/lib/auth";
 import { gender, str, type FormState } from "@/lib/forms";
+import { validLocality } from "@/lib/locations/resolve";
 
 export async function loginAction(_: FormState, fd: FormData): Promise<FormState> {
   const t = await getTranslations("auth");
@@ -48,7 +49,7 @@ export async function registerAction(_: FormState, fd: FormData): Promise<FormSt
     fatherName: str(fd, "fatherName"),
     motherName: str(fd, "motherName"),
     birthYear: str(fd, "birthYear"),
-    nativePlace: str(fd, "nativePlace"),
+    nativePlace: str(fd, "nativePlace") ?? str(fd, "text"),
     gotraId: str(fd, "gotraId"),
     note: str(fd, "note"),
   });
@@ -80,6 +81,7 @@ export async function registerAction(_: FormState, fd: FormData): Promise<FormSt
           motherName: d.motherName,
           birthYear: d.birthYear,
           nativePlace: d.nativePlace,
+          nativeLocalityId: await validLocality(str(fd, "localityId"), d.districtId),
           gotraId: d.gotraId,
           note: d.note,
         },

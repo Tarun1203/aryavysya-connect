@@ -51,6 +51,8 @@ model District {
   id        String   @id @default(cuid())
   name      String
   state     String
+  /// Local Government Directory (LGD) district code, when loaded from LGD
+  lgdCode   Int?     @unique
   createdAt DateTime @default(now())
 
   inchargeId String? @unique
@@ -60,8 +62,58 @@ model District {
   persons       Person[]
   claims        FamilyClaim[]
   organizations Organization[]
+  taluks        Taluk[]
+  localities    Locality[]
 
   @@unique([state, name])
+}
+
+/// Taluk / mandal / tehsil (LGD "sub-district")
+model Taluk {
+  id      String @id @default(cuid())
+  name    String
+  lgdCode Int?   @unique
+
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+
+  localities    Locality[]
+  organizations Organization[]
+
+  @@unique([districtId, name])
+}
+
+enum LocalityKind {
+  VILLAGE // LGD village
+  POST_OFFICE // India Post office (B.O / S.O / H.O)
+}
+
+/// A village (from LGD) or a post office (from India Post), with its pincode when known.
+model Locality {
+  id         String       @id @default(cuid())
+  /// Stable import key: "v:<lgd code>" for villages, "po:<pincode>:<name>" for post offices
+  key        String       @unique
+  name       String
+  nameLocal  String?
+  kind       LocalityKind
+  pincode    String?
+  officeType String?
+  lgdCode    Int?
+  latitude   Float?
+  longitude  Float?
+
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  talukId    String?
+  taluk      Taluk?   @relation(fields: [talukId], references: [id], onDelete: SetNull)
+
+  nativeOf      Person[]       @relation("NativeLocality")
+  bornIn        Person[]       @relation("BirthLocality")
+  claims        FamilyClaim[]
+  organizations Organization[]
+
+  @@index([districtId, talukId, name])
+  @@index([pincode])
 }
 
 /// A community body: Akhila Bharatha sangham (national), Mahasabha / Mahamandali (state),
@@ -81,6 +133,10 @@ model Organization {
 
   districtId String?
   district   District? @relation(fields: [districtId], references: [id])
+  talukId    String?
+  taluk      Taluk?    @relation(fields: [talukId], references: [id], onDelete: SetNull)
+  localityId String?
+  locality   Locality? @relation(fields: [localityId], references: [id], onDelete: SetNull)
 
   parentId String?
   parent   Organization?  @relation("OrgTree", fields: [parentId], references: [id], onDelete: SetNull)
@@ -168,16 +224,19 @@ model FamilyClaim {
   personId String?
   person   Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
 
-  givenName   String
-  surname     String
-  gender      Gender
-  fatherName  String?
-  motherName  String?
-  birthYear   Int?
-  nativePlace String?
-  gotraId     String?
-  gotra       Gotra?  @relation(fields: [gotraId], references: [id])
-  note        String?
+  givenName        String
+  surname          String
+  gender           Gender
+  fatherName       String?
+  motherName       String?
+  birthYear        Int?
+  nativePlace      String?
+  /// Native village / post office picked from the location directory
+  nativeLocalityId String?
+  nativeLocality   Locality? @relation(fields: [nativeLocalityId], references: [id], onDelete: SetNull)
+  gotraId          String?
+  gotra            Gotra?    @relation(fields: [gotraId], references: [id])
+  note             String?
 
   reviewedById String?
   reviewedBy   User?     @relation("ClaimReviewer", fields: [reviewedById], references: [id])
@@ -200,19 +259,25 @@ model Person {
   gotraId String?
   gotra   Gotra?  @relation(fields: [gotraId], references: [id])
 
-  isLiving    Boolean @default(true)
+  isLiving         Boolean   @default(true)
   /// Free-form dates: "1952", "1952-03" or "1952-03-14"
-  birthDate   String?
-  birthPlace  String?
-  deathDate   String?
+  birthDate        String?
+  /// Display text; birthLocality links it to the location directory when picked from there
+  birthPlace       String?
+  birthLocalityId  String?
+  birthLocality    Locality? @relation("BirthLocality", fields: [birthLocalityId], references: [id], onDelete: SetNull)
+  deathDate        String?
   /// Tithi of death, used for the annual shraddham / aabdikam
-  deathTithi  String?
-  nativePlace String?
-  nakshatra   String?
-  rasi        String?
-  kuladevata  String? @default("Vasavi Kanyaka Parameswari")
-  occupation  String?
-  notes       String?
+  deathTithi       String?
+  /// Native place (ooru) display text; nativeLocality links it to the location directory
+  nativePlace      String?
+  nativeLocalityId String?
+  nativeLocality   Locality? @relation("NativeLocality", fields: [nativeLocalityId], references: [id], onDelete: SetNull)
+  nakshatra        String?
+  rasi             String?
+  kuladevata       String?   @default("Vasavi Kanyaka Parameswari")
+  occupation       String?
+  notes            String?
 
   districtId String?
   district   District? @relation(fields: [districtId], references: [id])

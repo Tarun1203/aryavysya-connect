@@ -8,6 +8,7 @@ import { currentUser } from "@/lib/auth";
 import { audit, canAddRelative, canEditPerson, canView, type Relation } from "@/lib/permissions";
 import { familyScope } from "@/lib/family";
 import { personFields, str, type FormState } from "@/lib/forms";
+import { cleanPlaces } from "@/lib/locations/resolve";
 
 export async function updatePersonAction(personId: string, _: FormState, fd: FormData): Promise<FormState> {
   const t = await getTranslations();
@@ -17,7 +18,7 @@ export async function updatePersonAction(personId: string, _: FormState, fd: For
   if (!parsed.success) return { error: t("errors.required") };
 
   const before = await db.person.findUniqueOrThrow({ where: { id: personId } });
-  const data = parsed.data;
+  const data = await cleanPlaces(parsed.data);
   await db.person.update({ where: { id: personId }, data: { ...data, updatedById: user!.id } });
   const changed = Object.fromEntries(
     Object.entries(data).filter(([k, v]) => before[k as keyof typeof before] !== v).map(([k, v]) => [k, { from: before[k as keyof typeof before], to: v }])
@@ -38,9 +39,10 @@ export async function addRelativeAction(anchorId: string, relation: Relation, _:
   if (!parsed.success) return { error: t("errors.required") };
 
   const anchor = await db.person.findUniqueOrThrow({ where: { id: anchorId } });
+  const places = await cleanPlaces(parsed.data);
   const person = await db.$transaction(async (tx) => {
     const p = await tx.person.create({
-      data: { ...parsed.data, districtId: parsed.data.districtId ?? anchor.districtId, createdById: user!.id, updatedById: user!.id },
+      data: { ...places, districtId: places.districtId ?? anchor.districtId, createdById: user!.id, updatedById: user!.id },
     });
     if (relation === "parent") await tx.parentChild.create({ data: { parentId: p.id, childId: anchorId } });
     if (relation === "child") {

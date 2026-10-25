@@ -39,6 +39,8 @@ export function personFields(fd: FormData) {
       occupation: z.string().nullable(),
       notes: z.string().nullable(),
       districtId: z.string().nullable(),
+      nativeLocalityId: z.string().nullable(),
+      birthLocalityId: z.string().nullable(),
     })
     .safeParse({
       givenName: str(fd, "givenName") ?? "",
@@ -49,15 +51,19 @@ export function personFields(fd: FormData) {
       gotraId: str(fd, "gotraId"),
       isLiving: fd.get("isLiving") === "on",
       birthDate: str(fd, "birthDate"),
-      birthPlace: str(fd, "birthPlace"),
+      // Typed text wins; otherwise use the place picked in the location directory
+      birthPlace: str(fd, "birthPlace") ?? str(fd, "birthText"),
       deathDate: str(fd, "deathDate"),
       deathTithi: str(fd, "deathTithi"),
-      nativePlace: str(fd, "nativePlace"),
+      nativePlace: str(fd, "nativePlace") ?? str(fd, "nativeText"),
       nakshatra: str(fd, "nakshatra"),
       rasi: str(fd, "rasi"),
       kuladevata: str(fd, "kuladevata"),
       occupation: str(fd, "occupation"),
       notes: str(fd, "notes"),
-      districtId: str(fd, "districtId"),
+      // The person's district is the district of their native place
+      districtId: str(fd, "nativeDistrictId") ?? str(fd, "districtId"),
+      nativeLocalityId: str(fd, "nativeLocalityId"),
+      birthLocalityId: str(fd, "birthLocalityId"),
     });
 }

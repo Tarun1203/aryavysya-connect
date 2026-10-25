@@ -10,6 +10,7 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
   const user = await requireAdmin(locale);
   const scope = await adminScope(user);
   const t = await getTranslations("admin");
+  const tl = await getTranslations("locations");
 
   const scopeLabel = !scope
     ? null
@@ -29,7 +30,12 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
           { href: "/admin/users", label: t("tabUsers") },
         ]
       : []),
-    ...(scope?.kind === "all" ? [{ href: "/admin/settings", label: t("tabSettings") }] : []),
+    ...(scope?.kind === "all"
+      ? [
+          { href: "/admin/settings", label: t("tabSettings") },
+          { href: "/admin/locations", label: tl("tab") },
+        ]
+      : []),
   ];
 
   return (

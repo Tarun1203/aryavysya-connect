@@ -4,7 +4,8 @@ import { redirect } from "@/i18n/navigation";
 import { db } from "@/lib/db";
 import { requireViewer } from "@/lib/guard";
 import { canEditPerson } from "@/lib/permissions";
-import { districtOptions, fullName, gotraOptions } from "@/lib/reference";
+import { fullName, gotraOptions } from "@/lib/reference";
+import { pickerDefaults } from "@/lib/locations/resolve";
 import { updatePersonAction } from "@/app/actions/person";
 import { PersonForm } from "@/components/PersonForm";
 import { PageTitle } from "@/components/ui";
@@ -17,14 +18,18 @@ export default async function EditPersonPage({ params }: PageProps<"/[locale]/pe
   if (!person) notFound();
   if (!(await canEditPerson(user, id))) redirect({ href: `/person/${id}`, locale });
   const t = await getTranslations("person");
-  const [gotras, districts] = await Promise.all([gotraOptions(locale), districtOptions()]);
+  const [gotras, native, birth] = await Promise.all([
+    gotraOptions(locale),
+    pickerDefaults(person.nativeLocalityId, person.districtId),
+    pickerDefaults(person.birthLocalityId),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl">
       <PageTitle>
         {t("edit")}: {fullName(person)}
       </PageTitle>
-      <PersonForm action={updatePersonAction.bind(null, id)} defaults={person} gotras={gotras} districts={districts} />
+      <PersonForm action={updatePersonAction.bind(null, id)} defaults={person} gotras={gotras} places={{ native, birth }} />
     </div>
   );
 }

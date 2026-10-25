@@ -6,6 +6,8 @@ import { adminScope, districtWhere } from "@/lib/permissions";
 import { assignInchargeAction, assignOrgAdminAction, createOrganizationAction, revokeAdminAction } from "@/app/actions/admin";
 import { ActionForm } from "@/components/ActionForm";
 import { Card, Field, Input, Select } from "@/components/ui";
+import { LocationPicker } from "@/components/LocationPicker";
+import { pickerDefaults } from "@/lib/locations/resolve";
 import type { OrgLevel } from "@/generated/prisma/client";
 
 export default async function OrganizationsPage({ params }: PageProps<"/[locale]/admin/organizations">) {
@@ -23,11 +25,12 @@ export default async function OrganizationsPage({ params }: PageProps<"/[locale]
     db.district.findMany({ where: dWhere, include: { incharge: true }, orderBy: [{ state: "asc" }, { name: "asc" }] }),
     db.organization.findMany({
       where: orgWhere,
-      include: { district: true, admins: true, _count: { select: { members: true } } },
+      include: { district: true, taluk: true, locality: true, admins: true, _count: { select: { members: true } } },
       orderBy: [{ level: "asc" }, { name: "asc" }],
     }),
   ]);
   const states = [...new Set(districts.map((d) => d.state))];
+  const placeDefaults = await pickerDefaults(null, s.kind === "district" ? s.districtId : null);
 
   const canAssignIncharge = s.kind === "all" || s.kind === "state";
   const creatableLevels: OrgLevel[] =
@@ -88,7 +91,7 @@ export default async function OrganizationsPage({ params }: PageProps<"/[locale]
                 <h3 className="text-lg font-semibold">{o.name}</h3>
                 {o.nameLocal && <div>{o.nameLocal}</div>}
                 <div className="text-sm text-muted">
-                  {[o.kind, o.town, o.district?.name, o.state].filter(Boolean).join(" · ")} · {t("members", { count: o._count.members })}
+                  {[o.kind, o.locality?.name ?? o.town, o.taluk?.name, o.district?.name, o.state].filter(Boolean).join(" · ")}{o.locality?.pincode ? ` – ${o.locality.pincode}` : ""} · {t("members", { count: o._count.members })}
                 </div>
               </div>
               <div>
@@ -154,16 +157,10 @@ export default async function OrganizationsPage({ params }: PageProps<"/[locale]
                 </datalist>
               </Field>
             )}
-            <Field label={t("districtRequired")}>
-              <Select name="districtId" defaultValue={s.kind === "district" ? s.districtId : ""}>
-                <option value="">—</option>
-                {districts.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}, {d.state}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            <div className="sm:col-span-2">
+              {/* District → taluk → village / post office where the body is based */}
+              <LocationPicker prefix="place" defaults={placeDefaults} />
+            </div>
             <Field label={t("town")}>
               <Input name="town" />
             </Field>

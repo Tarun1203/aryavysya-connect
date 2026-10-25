@@ -4,7 +4,8 @@ import { Link, redirect } from "@/i18n/navigation";
 import { requireViewer } from "@/lib/guard";
 import { canAddRelative, type Relation } from "@/lib/permissions";
 import { getFamily } from "@/lib/tree";
-import { districtOptions, fullName, gotraOptions } from "@/lib/reference";
+import { fullName, gotraOptions } from "@/lib/reference";
+import { pickerDefaults } from "@/lib/locations/resolve";
 import { addRelativeAction, linkExistingAction } from "@/app/actions/person";
 import { PersonForm, type PersonDefaults } from "@/components/PersonForm";
 import { LinkExistingForm } from "@/components/LinkExistingForm";
@@ -25,7 +26,11 @@ export default async function AddRelativePage({ params }: PageProps<"/[locale]/p
 
   const t = await getTranslations("person");
   const tm = await getTranslations("match");
-  const [gotras, districts] = await Promise.all([gotraOptions(locale), districtOptions()]);
+  // Parents and children usually share the native place (ooru); a spouse starts with just the district
+  const [gotras, native] = await Promise.all([
+    gotraOptions(locale),
+    pickerDefaults(relation === "spouse" ? null : person.nativeLocalityId, person.districtId),
+  ]);
   const title = { parent: t("addParent"), child: t("addChild"), spouse: t("addSpouse") }[relation];
 
   // Sensible defaults: a child inherits the father's intiperu and gotra
@@ -56,7 +61,7 @@ export default async function AddRelativePage({ params }: PageProps<"/[locale]/p
           action={addRelativeAction.bind(null, id, relation)}
           defaults={defaults}
           gotras={gotras}
-          districts={districts}
+          places={{ native, birth: {} }}
           coParents={coParents}
           submitLabel={title}
         />

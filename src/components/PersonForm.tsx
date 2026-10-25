@@ -6,6 +6,7 @@ import type { FormState } from "@/lib/forms";
 import type { Option } from "@/lib/reference";
 import { NAKSHATRAS, RASIS, DEFAULT_KULADEVATA } from "@/lib/constants";
 import { Button, Card, Field, Input, Notice, Select, Textarea } from "./ui";
+import { LocationPicker, type PickedLocation } from "./LocationPicker";
 
 export type PersonDefaults = Partial<{
   givenName: string;
@@ -32,13 +33,15 @@ type Props = {
   action: (state: FormState, fd: FormData) => Promise<FormState>;
   defaults?: PersonDefaults;
   gotras: Option[];
-  districts: Option[];
+  /** Saved native / birth places for the location pickers */
+  places?: { native: PickedLocation; birth: PickedLocation };
   coParents?: Option[];
   submitLabel?: string;
 };
 
-export function PersonForm({ action, defaults = {}, gotras, districts, coParents, submitLabel }: Props) {
+export function PersonForm({ action, defaults = {}, gotras, places = { native: {}, birth: {} }, coParents, submitLabel }: Props) {
   const t = useTranslations("person");
+  const tl = useTranslations("locations");
   const [state, formAction, pending] = useActionState(action, undefined);
   const [living, setLiving] = useState(defaults.isLiving ?? true);
   const d = (k: keyof PersonDefaults) => (defaults[k] as string | null | undefined) ?? "";
@@ -96,9 +99,6 @@ export function PersonForm({ action, defaults = {}, gotras, districts, coParents
         <Field label={t("birthDate")} hint={t("dateHint")}>
           <Input name="birthDate" defaultValue={d("birthDate")} pattern="\d{4}(-\d{2}(-\d{2})?)?" />
         </Field>
-        <Field label={t("birthPlace")}>
-          <Input name="birthPlace" defaultValue={d("birthPlace")} />
-        </Field>
         {!living && (
           <>
             <Field label={t("deathDate")} hint={t("dateHint")}>
@@ -109,19 +109,6 @@ export function PersonForm({ action, defaults = {}, gotras, districts, coParents
             </Field>
           </>
         )}
-        <Field label={t("nativePlace")}>
-          <Input name="nativePlace" defaultValue={d("nativePlace")} />
-        </Field>
-        <Field label={t("district")}>
-          <Select name="districtId" defaultValue={d("districtId")}>
-            <option value="">{t("choose")}</option>
-            {districts.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
         <Field label={t("nakshatra")}>
           <Select name="nakshatra" defaultValue={d("nakshatra")}>
             <option value="">{t("choose")}</option>
@@ -149,6 +136,20 @@ export function PersonForm({ action, defaults = {}, gotras, districts, coParents
             <Textarea name="notes" defaultValue={d("notes")} />
           </Field>
         </div>
+      </Card>
+      <Card className="flex flex-col gap-4">
+        <h3 className="font-semibold">{tl("nativePlace")}</h3>
+        <Field label={t("nativePlace")}>
+          <Input name="nativePlace" defaultValue={d("nativePlace")} />
+        </Field>
+        <LocationPicker prefix="native" defaults={places.native} />
+      </Card>
+      <Card className="flex flex-col gap-4">
+        <h3 className="font-semibold">{tl("birthPlace")}</h3>
+        <Field label={t("birthPlace")}>
+          <Input name="birthPlace" defaultValue={d("birthPlace")} />
+        </Field>
+        <LocationPicker prefix="birth" defaults={places.birth} />
       </Card>
       <Button disabled={pending} className="self-start">
         {submitLabel ?? t("save")}

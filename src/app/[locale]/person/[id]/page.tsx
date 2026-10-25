@@ -34,10 +34,10 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
   const details: [string, string | null | undefined][] = [
     [t("gotra"), gotraLabel(person.gotra, locale)],
     [t("birthDate"), person.birthDate],
-    [t("birthPlace"), person.birthPlace],
+    [t("birthPlace"), placeLine(person.birthPlace, person.birthLocality)],
     [t("deathDate"), person.isLiving ? null : person.deathDate],
     [t("deathTithi"), person.isLiving ? null : person.deathTithi],
-    [t("nativePlace"), person.nativePlace],
+    [t("nativePlace"), placeLine(person.nativePlace, person.nativeLocality)],
     [t("district"), person.district && `${person.district.name}, ${person.district.state}`],
     [t("nakshatra"), person.nakshatra],
     [t("rasi"), person.rasi],
@@ -175,4 +175,13 @@ function Section({ title, none, children: items }: { title: string; none: string
       {items.length ? <ul className="flex flex-col gap-2">{items}</ul> : <p className="text-sm text-muted">{none}</p>}
     </div>
   );
+}
+
+type LinkedPlace = { name: string; pincode: string | null; taluk: { name: string } | null; district: { name: string; state: string } } | null;
+
+/** Typed place text, plus the linked village / post office with taluk, district and pincode. */
+function placeLine(text: string | null, place: LinkedPlace) {
+  if (!place) return text;
+  const linked = [place.name, place.taluk?.name, place.district.name, place.district.state].filter(Boolean).join(", ") + (place.pincode ? ` – ${place.pincode}` : "");
+  return text && !linked.toLowerCase().startsWith(text.toLowerCase()) ? `${text} (${linked})` : linked;
 }

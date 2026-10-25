@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { loginAction, registerAction } from "@/app/actions/auth";
 import type { Option } from "@/lib/reference";
 import { Button, Card, Field, Input, Notice, Select, Textarea } from "./ui";
+import { LocationPicker } from "./LocationPicker";
 
 export function LoginForm() {
   const t = useTranslations("auth");
@@ -26,11 +27,9 @@ export function LoginForm() {
 }
 
 export function RegisterForm({
-  districts,
   gotras,
   localOrgs,
 }: {
-  districts: Option[];
   gotras: Option[];
   localOrgs: (Option & { districtId: string | null })[];
 }) {
@@ -55,16 +54,12 @@ export function RegisterForm({
         <Field label={`${t("auth.password")} *`} hint={t("auth.passwordHint")}>
           <Input name="password" type="password" autoComplete="new-password" minLength={8} required />
         </Field>
-        <Field label={`${t("person.district")} *`}>
-          <Select name="districtId" required value={districtId} onChange={(e) => setDistrictId(e.target.value)}>
-            <option value="">{t("person.choose")}</option>
-            {districts.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
+      </Card>
+
+      <Card className="flex flex-col gap-4">
+        <h2 className="font-semibold">{t("locations.nativePlace")} *</h2>
+        {/* The district picked here decides which district in-charge verifies the member */}
+        <LocationPicker required onDistrictChange={setDistrictId} />
         <Field label={t("auth.localOrg")} hint={t("auth.localOrgHint")}>
           <Select name="organizationId" defaultValue="" key={districtId} disabled={!orgsHere.length}>
             <option value="">{t("auth.localOrgNone")}</option>

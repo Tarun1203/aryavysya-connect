@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { currentUser, type SessionUser } from "@/lib/auth";
 import { adminScope, audit, claimRights, districtWhere } from "@/lib/permissions";
 import { str, type FormState } from "@/lib/forms";
+import { validLocality, validTaluk } from "@/lib/locations/resolve";
 import type { OrgLevel, Role } from "@/generated/prisma/client";
 
 async function admin() {
@@ -57,6 +58,7 @@ export async function approveClaimAction(claimId: string, _: FormState, fd: Form
         gotraId: claim.gotraId,
         birthDate: claim.birthYear ? String(claim.birthYear) : null,
         nativePlace: claim.nativePlace,
+        nativeLocalityId: claim.nativeLocalityId,
         districtId: claim.districtId,
         createdById: u.id,
         updatedById: u.id,
@@ -195,8 +197,9 @@ export async function createOrganizationAction(_: FormState, fd: FormData): Prom
   const kind = str(fd, "kind");
   if (!level || !name || !kind) return { error: t("errors.required") };
 
-  let state = str(fd, "state");
-  let districtId = str(fd, "districtId");
+  let state = str(fd, "state") ?? str(fd, "placeState");
+  // State and national bodies are not tied to one district
+  let districtId = level === "STATE" || level === "NATIONAL" ? null : (str(fd, "placeDistrictId") ?? str(fd, "districtId"));
   if (districtId) {
     const d = await db.district.findUniqueOrThrow({ where: { id: districtId } });
     state = d.state;
@@ -223,6 +226,10 @@ export async function createOrganizationAction(_: FormState, fd: FormData): Prom
         : ((await db.organization.findFirst({ where: { level: "DISTRICT", districtId } })) ??
           (await db.organization.findFirst({ where: { level: "STATE", state } })));
 
+  const talukId = await validTaluk(str(fd, "placeTalukId"), districtId);
+  const localityId = await validLocality(str(fd, "placeLocalityId"), districtId);
+  const locality = localityId ? await db.locality.findUnique({ where: { id: localityId } }) : null;
+
   const org = await db.organization.create({
     data: {
       name,
@@ -230,8 +237,10 @@ export async function createOrganizationAction(_: FormState, fd: FormData): Prom
       level,
       state,
       districtId,
+      talukId: districtId ? talukId : null,
+      localityId: districtId ? localityId : null,
       nameLocal: str(fd, "nameLocal"),
-      town: str(fd, "town"),
+      town: str(fd, "town") ?? locality?.name ?? null,
       phone: str(fd, "phone"),
       address: str(fd, "address"),
       parentId: level === "DISTRICT" && parent?.level === "DISTRICT" ? null : parent?.id ?? null,

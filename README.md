@@ -142,6 +142,25 @@ The `Dockerfile` also works on Google Cloud Run, Railway or Fly.io with any mana
 
 After the first deploy, sign in as the super admin. Under **Administration → Sanghas, sabhas & in-charges**, add the state bodies and appoint their heads. The state heads then appoint district in-charges, who add their local sanghas and sabhas.
 
+### Location directory (State → District → Taluk → Village / Post office → Pincode)
+
+Members choose places with a picker. They can type a pincode to fill in everything, or pick State → District → Taluk and search for the village or post office in English or the local script. The picker is used for registration (native place), person details (native place and birth place), sanghas and sabhas, and search filters.
+
+The data comes from two official sources. Load them in this order:
+
+1. **LGD sub-districts**, which give the taluks (from [lgdirectory.gov.in](https://lgdirectory.gov.in), Download Directory, CSV).
+2. **LGD villages**, one file per state is fine (same source).
+3. **India Post pincode directory**, the post offices and pincodes (from [data.gov.in](https://www.data.gov.in/resource/all-india-pincode-directory-till-last-month), CSV).
+
+You can import them in either of two ways:
+
+- **Command line**, for the large one-time load: `npm run locations:import -- file1.csv file2.csv …`. It writes to the database in `.env`, and asks for `--yes` before writing to any database that isn't on your PC.
+- **Website:** go to **Administration → Locations → Upload CSV** (super admin only).
+
+The importer detects each file type from its columns, and re-importing a file updates the existing rows. It matches names across sources: `ANANTHAPUR` matches Anantapur, and `NELLORE` matches Sri Potti Sriramulu Nellore. India Post data has no taluks, so post offices are linked to the LGD village of the same name. That gives the village its pincode and the post office its taluk. Any district the importer can't match is created and listed in the import summary, so you can spot duplicates.
+
+For local development, `npm run dev:localdb` runs the app against the local test database in `.env.localdb`, even when `.env` points at Neon.
+
 ### Data to review before launch
 
 - `prisma/data/gotras.ts`: the 102 gotras, transcribed from vaasavi.net. Spellings vary between sources.
