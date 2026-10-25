@@ -1,0 +1,276 @@
+// Arya Vysya Vamsha Vruksham – family tree data model.
+// Connection URL lives in prisma.config.ts (DATABASE_URL).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// SUPER_ADMIN is the platform owner. The other admin roles are "secondary admins"
+/// tied to a community body, each limited to its own state / district / sangha.
+enum Role {
+  MEMBER
+  LOCAL_ADMIN // office bearer of a local sangha / sabha – endorses its members
+  DISTRICT_INCHARGE // the one person in charge of a district – final approval, edits the district
+  STATE_ADMIN // state head body (Mahasabha / Mahamandali / Akhila Bharatha Sangham)
+  SUPER_ADMIN // platform owner – states, gotras, districts, appoints state heads
+}
+
+enum OrgLevel {
+  NATIONAL
+  STATE
+  DISTRICT
+  LOCAL
+}
+
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Every member belongs to exactly one district, which has one in-charge person.
+model District {
+  id        String   @id @default(cuid())
+  name      String
+  state     String
+  createdAt DateTime @default(now())
+
+  inchargeId String? @unique
+  incharge   User?   @relation("DistrictIncharge", fields: [inchargeId], references: [id], onDelete: SetNull)
+
+  users         User[]
+  persons       Person[]
+  claims        FamilyClaim[]
+  organizations Organization[]
+
+  @@unique([state, name])
+}
+
+/// A community body: Akhila Bharatha sangham (national), Mahasabha / Mahamandali (state),
+/// district sangham, or a local sangha / sabha in a town or mandal.
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  nameLocal String?
+  level     OrgLevel
+  /// Free label shown to users, e.g. "Mahasabha", "Mahamandali", "Sangham", "Sabha"
+  kind      String
+  state     String?
+  town      String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+
+  districtId String?
+  district   District? @relation(fields: [districtId], references: [id])
+
+  parentId String?
+  parent   Organization?  @relation("OrgTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Organization[] @relation("OrgTree")
+
+  members User[]        @relation("OrgMember")
+  admins  User[]        @relation("OrgAdmin")
+  claims  FamilyClaim[]
+
+  @@index([level, state])
+  @@index([districtId])
+}
+
+/// One of the 102 Arya Vysya gotras (managed by super admins).
+model Gotra {
+  id     String  @id @default(cuid())
+  name   String  @unique
+  nameTe String?
+  nameKn String?
+  nameTa String?
+  rishi  String?
+
+  persons Person[]
+  claims  FamilyClaim[]
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  phone        String?
+  passwordHash String
+  role         Role       @default(MEMBER)
+  status       UserStatus @default(PENDING)
+  locale       String     @default("en")
+
+  districtId String?
+  district   District? @relation(fields: [districtId], references: [id])
+
+  /// Local sangha / sabha the member belongs to (optional)
+  organizationId String?
+  organization   Organization? @relation("OrgMember", fields: [organizationId], references: [id], onDelete: SetNull)
+
+  /// Body this user administers (LOCAL_ADMIN → local org, STATE_ADMIN → state org)
+  adminOrgId String?
+  adminOrg   Organization? @relation("OrgAdmin", fields: [adminOrgId], references: [id], onDelete: SetNull)
+
+  /// District this user is in charge of (DISTRICT_INCHARGE)
+  inchargeOf District? @relation("DistrictIncharge")
+
+  /// The tree node that represents this user. Set only by an approval.
+  personId String? @unique
+  person   Person? @relation("UserSelf", fields: [personId], references: [id])
+
+  approvedById String?
+  approvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  claims         FamilyClaim[] @relation("ClaimUser")
+  reviewedClaims FamilyClaim[] @relation("ClaimReviewer")
+  endorsedClaims FamilyClaim[] @relation("ClaimEndorser")
+  audit          AuditLog[]
+}
+
+/// A member's request to be verified as belonging to a family.
+/// Either points at an existing person, or carries details to create one.
+model FamilyClaim {
+  id     String      @id @default(cuid())
+  status ClaimStatus @default(PENDING)
+
+  userId String
+  user   User   @relation("ClaimUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  districtId String
+  district   District @relation(fields: [districtId], references: [id])
+
+  /// Local sangha / sabha that should endorse this member first (optional)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  endorsedById   String?
+  endorsedBy     User?         @relation("ClaimEndorser", fields: [endorsedById], references: [id])
+  endorsedAt     DateTime?
+
+  /// Existing person the member says they are (optional)
+  personId String?
+  person   Person? @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  givenName   String
+  surname     String
+  gender      Gender
+  fatherName  String?
+  motherName  String?
+  birthYear   Int?
+  nativePlace String?
+  gotraId     String?
+  gotra       Gotra?  @relation(fields: [gotraId], references: [id])
+  note        String?
+
+  reviewedById String?
+  reviewedBy   User?     @relation("ClaimReviewer", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+  reviewNote   String?
+  createdAt    DateTime  @default(now())
+}
+
+model Person {
+  id String @id @default(cuid())
+
+  givenName      String
+  /// Intiperu – the family (house) name
+  surname        String
+  givenNameLocal String?
+  surnameLocal   String?
+  gender         Gender
+
+  /// Gotra by birth (inherited from the father). Used for sagotra checks.
+  gotraId String?
+  gotra   Gotra?  @relation(fields: [gotraId], references: [id])
+
+  isLiving    Boolean @default(true)
+  /// Free-form dates: "1952", "1952-03" or "1952-03-14"
+  birthDate   String?
+  birthPlace  String?
+  deathDate   String?
+  /// Tithi of death, used for the annual shraddham / aabdikam
+  deathTithi  String?
+  nativePlace String?
+  nakshatra   String?
+  rasi        String?
+  kuladevata  String? @default("Vasavi Kanyaka Parameswari")
+  occupation  String?
+  notes       String?
+
+  districtId String?
+  district   District? @relation(fields: [districtId], references: [id])
+
+  createdById String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  asChild  ParentChild[] @relation("ChildLink")
+  asParent ParentChild[] @relation("ParentLink")
+  couples1 Couple[]      @relation("Partner1")
+  couples2 Couple[]      @relation("Partner2")
+  user     User?         @relation("UserSelf")
+  claims   FamilyClaim[]
+
+  @@index([surname, givenName])
+  @@index([gotraId])
+  @@index([districtId])
+}
+
+model ParentChild {
+  id       String @id @default(cuid())
+  parentId String
+  childId  String
+  /// BIOLOGICAL | ADOPTED
+  type     String @default("BIOLOGICAL")
+
+  parent Person @relation("ParentLink", fields: [parentId], references: [id], onDelete: Cascade)
+  child  Person @relation("ChildLink", fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, childId])
+  @@index([childId])
+}
+
+model Couple {
+  id           String  @id @default(cuid())
+  person1Id    String
+  person2Id    String
+  marriageDate String?
+
+  person1 Person @relation("Partner1", fields: [person1Id], references: [id], onDelete: Cascade)
+  person2 Person @relation("Partner2", fields: [person2Id], references: [id], onDelete: Cascade)
+
+  @@unique([person1Id, person2Id])
+  @@index([person2Id])
+}
+
+/// Every change to the tree is recorded for AVOPA review.
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}

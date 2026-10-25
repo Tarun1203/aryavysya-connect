@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fffaf3;
+  --foreground: #2b1d14;
+  --surface: #ffffff;
+  --muted: #7a6455;
+  --line: #ead9c6;
+  --brand: #a3341f; /* kumkum */
+  --brand-soft: #fbe9dc;
+  --accent: #d98e04; /* turmeric */
+  --ok: #2f7d4f;
+  --warn: #b26a00;
+  --bad: #b3261e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1a1310;
+    --foreground: #f4e9df;
+    --surface: #241a15;
+    --muted: #b8a395;
+    --line: #3d2e25;
+    --brand: #ef8a6f;
+    --brand-soft: #3a211a;
+    --accent: #f0b43c;
+    --ok: #6cc28e;
+    --warn: #f0b43c;
+    --bad: #f28b82;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --font-sans: var(--font-noto), var(--font-noto-te), var(--font-noto-kn), var(--font-noto-ta), system-ui, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
