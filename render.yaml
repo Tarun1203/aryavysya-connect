@@ -1,6 +1,6 @@
 # Render Blueprint: free web service, database on Neon (free Postgres).
 # Dashboard → New → Blueprint → pick this repository.
-# When prompted, paste the Neon connection string into DATABASE_URL.
+# When prompted, paste Neon's pooled and direct connection strings (`neon env pull` writes both to .env).
 # To upgrade later: change plan to "starter" (no sleeping) – no code changes needed.
 services:
   - type: web
@@ -10,7 +10,9 @@ services:
     region: singapore
     healthCheckPath: /en
     envVars:
-      - key: DATABASE_URL
+      - key: DATABASE_URL # Neon pooled connection string (host ends in -pooler)
+        sync: false
+      - key: DATABASE_URL_UNPOOLED # Neon direct connection string, used for migrations
         sync: false
       - key: AUTH_SECRET
         generateValue: true

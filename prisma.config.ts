@@ -8,7 +8,8 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    // `prisma generate` runs at image build time without a database, so don't require the URL there
-    url: process.env.DATABASE_URL ?? "postgresql://localhost:5432/unset",
+    // Migrations need a direct (non-pooled) connection on Neon; the app itself uses the pooled DATABASE_URL.
+    // `prisma generate` runs at image build time without a database, so don't require the URL there.
+    url: process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL ?? "postgresql://localhost:5432/unset",
   },
 });

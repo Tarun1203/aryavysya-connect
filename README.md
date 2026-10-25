@@ -120,9 +120,11 @@ They all use `SEED_DEMO_PASSWORD`. **Leave it empty in production.**
 
 The container runs `prisma migrate deploy` and the seed on every start; the seed only upserts, so it is safe to repeat. It then starts the app on `$PORT`.
 
-1. **Database (Neon, free).** Sign up at [neon.tech](https://neon.tech) and create a project in the **AWS Asia Pacific (Singapore)** region. In **Connect**, turn **Connection pooling off** and copy the connection string. It starts with `postgresql://` and ends with `?sslmode=require`.
+1. **Database (Neon, free).** Create a project in the **AWS Asia Pacific (Singapore)** region, or link this repo to one with `neon init`. Then run `neon env pull`, which writes two connection strings to `.env`:
+   - `DATABASE_URL`: the **pooled** string (host ends in `-pooler`), which the app uses
+   - `DATABASE_URL_UNPOOLED`: the **direct** string, which Prisma migrations use
 2. **App (Render, free).** Go to **New → Blueprint** and select this repo. When prompted, fill in:
-   - `DATABASE_URL`: the Neon connection string
+   - `DATABASE_URL` and `DATABASE_URL_UNPOOLED`: the two Neon strings
    - `SEED_ADMIN_EMAIL`
    - `SEED_ADMIN_PASSWORD`
 
