@@ -116,11 +116,25 @@ The demo seed creates a family spanning 8 generations and one account for each r
 
 They all use `SEED_DEMO_PASSWORD`. **Leave it empty in production.**
 
-### Deploy (Render)
+### Deploy for free (Render + Neon)
 
 The container runs `prisma migrate deploy` and the seed on every start; the seed only upserts, so it is safe to repeat. It then starts the app on `$PORT`.
 
-On Render, go to **New → Blueprint** and select this repo. `render.yaml` creates the web service and a managed Postgres in Singapore, and generates `AUTH_SECRET`. Set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` when prompted.
+1. **Database (Neon, free).** Sign up at [neon.tech](https://neon.tech) and create a project in the **AWS Asia Pacific (Singapore)** region. In **Connect**, turn **Connection pooling off** and copy the connection string. It starts with `postgresql://` and ends with `?sslmode=require`.
+2. **App (Render, free).** Go to **New → Blueprint** and select this repo. When prompted, fill in:
+   - `DATABASE_URL`: the Neon connection string
+   - `SEED_ADMIN_EMAIL`
+   - `SEED_ADMIN_PASSWORD`
+
+   `AUTH_SECRET` is generated for you. Then click **Apply**.
+3. Open `https://<service>.onrender.com/en` and sign in as the super admin.
+
+Free-tier limits:
+
+- **Render:** the app sleeps after about 15 minutes idle and takes 30–60 seconds to wake.
+- **Neon:** about 0.5 GB of storage.
+
+To upgrade, change `plan: free` to `plan: starter` in `render.yaml`. No code changes are needed.
 
 The `Dockerfile` also works on Google Cloud Run, Railway or Fly.io with any managed Postgres.
 
