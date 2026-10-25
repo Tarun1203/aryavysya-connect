@@ -9,6 +9,8 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-c
 FROM base AS deps
 COPY package.json package-lock.json prisma.config.ts ./
 COPY prisma ./prisma
+# prisma.config.ts imports this helper
+COPY src/lib/db-url.ts ./src/lib/db-url.ts
 RUN npm ci
 
 FROM base AS build
