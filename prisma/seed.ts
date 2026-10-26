@@ -1,12 +1,18 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { db } from "../src/lib/db";
-import { GOTRAS } from "./data/gotras";
+import { GOTRAS, RENAMED_GOTRAS } from "./data/gotras";
 import { DISTRICTS } from "./data/districts";
 
 async function seedReferenceData() {
-  for (const name of GOTRAS) {
-    await db.gotra.upsert({ where: { name }, update: {}, create: { name } });
+  for (const [from, to] of Object.entries(RENAMED_GOTRAS)) {
+    if (!(await db.gotra.findUnique({ where: { name: to } }))) await db.gotra.updateMany({ where: { name: from }, data: { name: to } });
+  }
+  // The list number and kula names fill in once; after that they belong to the super admins' edits
+  const filled = new Set((await db.gotra.findMany({ where: { no: { not: null } }, select: { name: true } })).map((g) => g.name));
+  for (const { no, name, kulas } of GOTRAS) {
+    if (filled.has(name)) continue;
+    await db.gotra.upsert({ where: { name }, update: { no, kulas }, create: { no, name, kulas } });
   }
   // Once the official LGD directory is loaded it owns the districts (and may have renamed or merged
   // the starter ones), so re-adding the starter list on every start would create duplicates.

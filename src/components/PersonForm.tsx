@@ -3,10 +3,11 @@
 import { useActionState, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { FormState } from "@/lib/forms";
-import type { Option } from "@/lib/reference";
+import type { GotraOption, Option } from "@/lib/reference";
 import { NAKSHATRAS, RASIS, DEFAULT_KULADEVATA } from "@/lib/constants";
 import { Button, Card, Field, Input, Notice, Select, Textarea } from "./ui";
 import { LocationPicker, type PickedLocation } from "./LocationPicker";
+import { GotraSelect } from "./GotraSelect";
 
 export type PersonDefaults = Partial<{
   givenName: string;
@@ -32,7 +33,7 @@ export type PersonDefaults = Partial<{
 type Props = {
   action: (state: FormState, fd: FormData) => Promise<FormState>;
   defaults?: PersonDefaults;
-  gotras: Option[];
+  gotras: GotraOption[];
   /** Saved native / birth places for the location pickers */
   places?: { native: PickedLocation; birth: PickedLocation };
   coParents?: Option[];
@@ -71,14 +72,7 @@ export function PersonForm({ action, defaults = {}, gotras, places = { native: {
           </Select>
         </Field>
         <Field label={t("gotra")} hint={t("gotraHint")}>
-          <Select name="gotraId" defaultValue={d("gotraId")}>
-            <option value="">{t("choose")}</option>
-            {gotras.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.label}
-              </option>
-            ))}
-          </Select>
+          <GotraSelect name="gotraId" gotras={gotras} defaultValue={d("gotraId")} emptyLabel={t("choose")} />
         </Field>
         {coParents && coParents.length > 0 && (
           <Field label={t("otherParent")}>

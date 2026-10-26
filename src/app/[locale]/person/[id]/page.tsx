@@ -33,6 +33,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
 
   const details: [string, string | null | undefined][] = [
     [t("gotra"), gotraLabel(person.gotra, locale)],
+    [t("kulas"), person.gotra?.kulas.join(", ")],
     [t("birthDate"), person.birthDate],
     [t("birthPlace"), placeLine(person.birthPlace, person.birthLocality)],
     [t("deathDate"), person.isLiving ? null : person.deathDate],

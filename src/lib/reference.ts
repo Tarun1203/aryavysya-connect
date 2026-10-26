@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 
 export type Option = { id: string; label: string };
+export type GotraOption = Option & { kulas: string[] };
 
 type GotraNames = { name: string; nameTe: string | null; nameKn: string | null; nameTa: string | null };
 
@@ -12,9 +13,10 @@ export function gotraLabel(g: GotraNames | null | undefined, locale: string) {
   return local ? `${local} (${g.name})` : g.name;
 }
 
-export async function gotraOptions(locale: string): Promise<Option[]> {
-  const gotras = await db.gotra.findMany({ orderBy: { name: "asc" } });
-  return gotras.map((g) => ({ id: g.id, label: gotraLabel(g, locale)! }));
+/** Gotras in the traditional list order, with their kula names (sankethanamams) for searching. */
+export async function gotraOptions(locale: string): Promise<GotraOption[]> {
+  const gotras = await db.gotra.findMany({ orderBy: [{ no: { sort: "asc", nulls: "last" } }, { name: "asc" }] });
+  return gotras.map((g) => ({ id: g.id, label: gotraLabel(g, locale)!, kulas: g.kulas }));
 }
 
 export async function districtOptions(): Promise<Option[]> {

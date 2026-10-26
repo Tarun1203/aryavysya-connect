@@ -106,7 +106,10 @@
     "outOfScope": "This would go beyond your family's 5 generations. Ask your district in-charge to add them.",
     "alreadyLinked": "These people are already linked.",
     "matchWarning": "Marriage check: {verdict}",
-    "removeLink": "Remove link"
+    "removeLink": "Remove link",
+    "kulas": "Sankethanamam (kula names)",
+    "findGotra": "Type a gotra or kula name to find it",
+    "noGotraMatch": "No gotra or kula name matches"
   },
   "tree": {
     "title": "Family tree of {name}",
@@ -243,15 +246,18 @@
     "searchDistricts": "Search district",
     "districtCol": "District",
     "districtStats": "{members, plural, one {# member} other {# members}} · {bodies, plural, one {# body} other {# bodies}}",
-    "addGotrasHint": "One gotra per line. Existing names are skipped.",
-    "searchGotras": "Search gotra",
-    "gotraLocalProgress": "{done} of {total} have local-script names",
+    "addGotrasHint": "One gotra per line. Add its kula names after a colon, separated by commas. Existing gotras keep their other details.",
+    "searchGotras": "Search gotra or kula name",
     "gotraPeople": "{count, plural, =0 {No people yet} one {# person} other {# people}}",
-    "gotraSource": "The 102 gotras were transcribed from vaasavi.net. Spellings vary between lists, so have the state Mahasabhas confirm them.",
+    "gotraSource": "The 102 gotras and their sankethanamams follow the Vysyamala list. Spellings vary between families, so have the state Mahasabhas confirm them.",
     "addDistrictHint": "Only needed for a district missing from the official LGD directory.",
     "districtsCol": "Districts",
     "officialCol": "In LGD directory",
-    "inchargesCol": "With in-charge"
+    "inchargesCol": "With in-charge",
+    "gotraNo": "No",
+    "gotraName": "Gothiram name",
+    "sankethanamam": "Sankethanamam",
+    "edit": "Edit"
   },
   "errors": {
     "required": "Please fill in the required fields",

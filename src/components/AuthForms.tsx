@@ -3,9 +3,10 @@
 import { useActionState, useState } from "react";
 import { useTranslations } from "next-intl";
 import { loginAction, registerAction } from "@/app/actions/auth";
-import type { Option } from "@/lib/reference";
+import type { GotraOption, Option } from "@/lib/reference";
 import { Button, Card, Field, Input, Notice, Select, Textarea } from "./ui";
 import { LocationPicker } from "./LocationPicker";
+import { GotraSelect } from "./GotraSelect";
 
 export function LoginForm() {
   const t = useTranslations("auth");
@@ -30,7 +31,7 @@ export function RegisterForm({
   gotras,
   localOrgs,
 }: {
-  gotras: Option[];
+  gotras: GotraOption[];
   localOrgs: (Option & { districtId: string | null })[];
 }) {
   const t = useTranslations();
@@ -89,14 +90,7 @@ export function RegisterForm({
           </Select>
         </Field>
         <Field label={t("person.gotra")} hint={t("person.gotraHint")}>
-          <Select name="gotraId" defaultValue="">
-            <option value="">{t("person.choose")}</option>
-            {gotras.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.label}
-              </option>
-            ))}
-          </Select>
+          <GotraSelect name="gotraId" gotras={gotras} emptyLabel={t("person.choose")} />
         </Field>
         <Field label={t("person.fatherName")}>
           <Input name="fatherName" />

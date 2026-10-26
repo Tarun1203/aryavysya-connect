@@ -153,7 +153,11 @@ model Organization {
 /// One of the 102 Arya Vysya gotras (managed by super admins).
 model Gotra {
   id     String  @id @default(cuid())
+  /// Position in the traditional list of 102 gotras
+  no     Int?    @unique
   name   String  @unique
+  /// Sankethanamams (kula names) that belong to this gotra
+  kulas  String[] @default([])
   nameTe String?
   nameKn String?
   nameTa String?

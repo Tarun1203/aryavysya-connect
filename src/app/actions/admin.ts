@@ -252,13 +252,23 @@ export async function createOrganizationAction(_: FormState, fd: FormData): Prom
 
 /* ---------- Platform settings (super admin only) ---------- */
 
+/** Kula names arrive comma- or dash-separated, as in the community lists. */
+const splitKulas = (text: string) => [...new Set(text.split(/[,\n]|-/).map((k) => k.trim().replace(/\s+/g, " ")).filter(Boolean))];
+
 export async function addGotrasAction(_: FormState, fd: FormData): Promise<FormState> {
   const t = await getTranslations("admin");
   const { u, scope } = await admin();
   if (scope.kind !== "all") return { error: t("forbidden") };
-  const names = (str(fd, "gotras") ?? "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-  for (const name of names) await db.gotra.upsert({ where: { name }, update: {}, create: { name } });
-  await audit(u, "add-gotras", "Gotra", "-", { names });
+  // One gotra per line, optionally followed by its kula names: "Agasthyasa: Anubha Gula, Anubala"
+  const rows = (str(fd, "gotras") ?? "").split(/\r?\n/).map((line) => {
+    const [name, kulas = ""] = line.split(":");
+    return { name: name.trim(), kulas: splitKulas(kulas) };
+  });
+  const added = rows.filter((r) => r.name);
+  for (const { name, kulas } of added) {
+    await db.gotra.upsert({ where: { name }, update: kulas.length ? { kulas } : {}, create: { name, kulas } });
+  }
+  await audit(u, "add-gotras", "Gotra", "-", { names: added.map((r) => r.name) });
   return done("/admin/gotras");
 }
 
@@ -267,7 +277,7 @@ export async function updateGotraAction(gotraId: string, fd: FormData) {
   if (scope.kind !== "all") return;
   await db.gotra.update({
     where: { id: gotraId },
-    data: { nameTe: str(fd, "nameTe"), nameKn: str(fd, "nameKn"), nameTa: str(fd, "nameTa") },
+    data: { nameTe: str(fd, "nameTe"), nameKn: str(fd, "nameKn"), nameTa: str(fd, "nameTa"), kulas: splitKulas(str(fd, "kulas") ?? "") },
   });
   await audit(u, "update", "Gotra", gotraId);
   done("/admin/gotras");

@@ -5,7 +5,8 @@ import { requireViewer } from "@/lib/guard";
 import { fullName, gotraLabel, gotraOptions, lifeSpan } from "@/lib/reference";
 import { pickerDefaults } from "@/lib/locations/resolve";
 import { LocationPicker } from "@/components/LocationPicker";
-import { Button, Card, Field, Input, PageTitle, Select } from "@/components/ui";
+import { GotraSelect } from "@/components/GotraSelect";
+import { Button, Card, Field, Input, PageTitle } from "@/components/ui";
 
 type Search = {
   q?: string;
@@ -76,14 +77,7 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
             <Input name="q" defaultValue={sp.q} />
           </Field>
           <Field label={tp("gotra")}>
-            <Select name="gotra" defaultValue={sp.gotra ?? ""}>
-              <option value="">{t("anyGotra")}</option>
-              {gotras.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.label}
-                </option>
-              ))}
-            </Select>
+            <GotraSelect name="gotra" gotras={gotras} defaultValue={sp.gotra} emptyLabel={t("anyGotra")} />
           </Field>
           <Field label={t("place")}>
             <Input name="place" defaultValue={sp.place} />
