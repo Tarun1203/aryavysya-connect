@@ -5,9 +5,12 @@
 //   - LGD villages:     state/district/sub-district/village names and codes   → villages
 // Used by both `npm run locations:import` and the admin upload page.
 import { randomUUID } from "node:crypto";
-import type { Readable } from "node:stream";
+import { Readable } from "node:stream";
+import { createReadStream } from "node:fs";
+import { open } from "node:fs/promises";
 import { parse } from "csv-parse";
 import { db } from "@/lib/db";
+import { xlsxRecords } from "./xlsx";
 
 export type ImportFormat = "indiapost" | "lgd-subdistrict" | "lgd-village";
 
@@ -16,6 +19,8 @@ export type ImportSummary = {
   rows: number;
   skipped: number;
   districtsCreated: string[];
+  /** "India Post name → LGD name" for districts merged by matching their places */
+  districtsMerged: string[];
   taluks: number;
   localities: number;
   villagesGivenPincode: number;
@@ -27,12 +32,18 @@ const BATCH = 2000;
 
 /* ---------- name helpers ---------- */
 
-const titleCase = (s: string) =>
-  s
+/**
+ * Tidy capitalisation for ALL-CAPS / all-lower source text ("GUNTUR" → "Guntur"); mixed-case names
+ * from LGD are kept as written. Vowel-less initialisms stay upper case ("NTR", "Y.S.R.", "SPSR").
+ */
+const titleCase = (s: string) => {
+  const clean = s.replace(/\s+/g, " ").trim();
+  if (clean !== clean.toUpperCase() && clean !== clean.toLowerCase()) return clean;
+  return clean
     .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim()
+    .replace(/[a-z]+/g, (w) => (/[aeiouy]/.test(w) ? w : w.toUpperCase()))
     .replace(/(^|[\s(\-./])([a-z])/g, (_, p, c) => p + c.toUpperCase());
+};
 
 /**
  * Matching key that survives the spelling differences between India Post, LGD and our seed data
@@ -132,8 +143,11 @@ class Directory {
       this.districtByName.set(key, id);
     }
     if (code && !this.districtByCode.has(code)) {
-      // first time we see this LGD code for a district matched by name: remember it
-      await db.district.updateMany({ where: { id, lgdCode: null }, data: { lgdCode: code } }).catch(() => {});
+      // First time we see this LGD code for a district matched by name: store the code and adopt
+      // LGD's official spelling (e.g. "Anantapur" → "Ananthapuramu"). Skipped if that name is taken.
+      await db.district
+        .updateMany({ where: { id, lgdCode: null }, data: { lgdCode: code, name: titleCase(name) } })
+        .catch(() => db.district.updateMany({ where: { id, lgdCode: null }, data: { lgdCode: code } }).catch(() => {}));
       this.districtByCode.set(code, id);
     }
     return id;
@@ -149,7 +163,10 @@ class Directory {
     if (n.length < 4) return undefined;
     const hits = [...this.districtByName.entries()].filter(([k]) => {
       const [ks, kn] = k.split("|");
-      return ks === s && kn !== n && (kn.endsWith(n) || n.endsWith(kn));
+      if (ks !== s || kn === n) return false;
+      // a different prefix ("Sri Potti Sriramulu Nellore" ≈ "Nellore") or a short extra ending ("Ananthapuramu" ≈ "Anantapur")
+      const [short, long] = kn.length < n.length ? [kn, n] : [n, kn];
+      return long.endsWith(short) || (long.startsWith(short) && long.length - short.length <= 3);
     });
     const ids = new Set(hits.map(([, id]) => id));
     return ids.size === 1 ? [...ids][0] : undefined;
@@ -214,30 +231,157 @@ async function writeLocalities(rows: LocalityRow[]) {
   return unique.length;
 }
 
+/** Edit distance between two short strings (district name keys). */
+function editDistance(a: string, b: string) {
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0]++;
+    for (let j = 1; j <= b.length; j++) {
+      const cur = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = cur;
+    }
+  }
+  return row[b.length];
+}
+
+/** Move everything that points at district `fromId` onto `toId`, then delete `fromId`. */
+async function mergeDistrict(fromId: string, toId: string) {
+  await db.$transaction(async (tx) => {
+    const from = await tx.district.findUniqueOrThrow({ where: { id: fromId } });
+    for (const t of await tx.taluk.findMany({ where: { districtId: fromId } })) {
+      const same = await tx.taluk.findUnique({ where: { districtId_name: { districtId: toId, name: t.name } } });
+      if (same) {
+        await tx.locality.updateMany({ where: { talukId: t.id }, data: { talukId: same.id } });
+        await tx.organization.updateMany({ where: { talukId: t.id }, data: { talukId: same.id } });
+        await tx.taluk.delete({ where: { id: t.id } });
+      } else await tx.taluk.update({ where: { id: t.id }, data: { districtId: toId } });
+    }
+    const move = { where: { districtId: fromId }, data: { districtId: toId } };
+    await tx.locality.updateMany(move);
+    await tx.user.updateMany(move);
+    await tx.person.updateMany(move);
+    await tx.familyClaim.updateMany(move);
+    await tx.organization.updateMany(move);
+    if (from.inchargeId) {
+      await tx.district.update({ where: { id: fromId }, data: { inchargeId: null } });
+      await tx.district.update({ where: { id: toId }, data: { inchargeId: from.inchargeId } });
+    }
+    await tx.district.delete({ where: { id: fromId } });
+  });
+}
+
+/**
+ * India Post (and older seed lists) sometimes name a district differently from LGD: Odia spellings
+ * ("Kataka" = Cuttack), renames (Tuticorin → Thoothukkudi), typos (Jagtial / Jagitial), or an old
+ * district since split in three (Visakhapatnam). For every district without an LGD code:
+ *  1. each post office moves to the one LGD district in the state that has a village of its name;
+ *  2. the district then merges into the LGD district its post offices clearly point to
+ *     (≥ 10 shared names and at least twice the runner-up), or failing that
+ *  3. into the one LGD district in the state whose name is within 2 letters of its own.
+ * Members, people, sanghas, taluks and the in-charge move along. Anything ambiguous is left as is.
+ */
+export async function mergeUnmatchedDistricts(): Promise<string[]> {
+  const norm = (col: string) => `lower(regexp_replace(${col}, '[^A-Za-z]', '', 'g'))`;
+  const votes = await db.$queryRawUnsafe<{ src: string; tgt: string; votes: number }[]>(`
+    WITH po AS (
+      SELECT DISTINCT l."districtId" AS src, d."state", ${norm('l."name"')} AS k
+      FROM "Locality" l JOIN "District" d ON d."id" = l."districtId"
+      WHERE l."kind" = 'POST_OFFICE' AND d."lgdCode" IS NULL
+    ), v AS (
+      SELECT DISTINCT l."districtId" AS tgt, d."state", ${norm('l."name"')} AS k
+      FROM "Locality" l JOIN "District" d ON d."id" = l."districtId"
+      WHERE l."kind" = 'VILLAGE' AND d."lgdCode" IS NOT NULL
+    )
+    SELECT po.src, v.tgt, count(*)::int AS votes
+    FROM po JOIN v ON v."state" = po."state" AND v.k = po.k
+    GROUP BY 1, 2`);
+
+  // 1. post offices whose name is a village in exactly one LGD district of the state
+  await db.$executeRawUnsafe(`
+    WITH v AS (
+      SELECT d."state", ${norm('l."name"')} AS k, min(l."districtId") AS tgt
+      FROM "Locality" l JOIN "District" d ON d."id" = l."districtId"
+      WHERE l."kind" = 'VILLAGE' AND d."lgdCode" IS NOT NULL
+      GROUP BY 1, 2 HAVING count(DISTINCT l."districtId") = 1
+    ), po AS (
+      SELECT l."id", d."state", ${norm('l."name"')} AS k
+      FROM "Locality" l JOIN "District" d ON d."id" = l."districtId"
+      WHERE l."kind" = 'POST_OFFICE' AND d."lgdCode" IS NULL
+    )
+    UPDATE "Locality" p SET "districtId" = v.tgt, "talukId" = NULL
+    FROM po JOIN v ON v."state" = po."state" AND v.k = po.k
+    WHERE p."id" = po."id"`);
+
+  const bySrc = new Map<string, { tgt: string; votes: number }[]>();
+  for (const v of votes) bySrc.set(v.src, [...(bySrc.get(v.src) ?? []), v]);
+  const official = await db.district.findMany({ where: { lgdCode: { not: null } }, select: { id: true, name: true, state: true, inchargeId: true } });
+  const merged: string[] = [];
+
+  for (const from of await db.district.findMany({ where: { lgdCode: null } })) {
+    // 2. a clear winner among the post offices' votes
+    const cands = (bySrc.get(from.id) ?? []).sort((a, b) => b.votes - a.votes);
+    let targetId = cands[0] && cands[0].votes >= 10 && cands[0].votes >= 2 * (cands[1]?.votes ?? 0) ? cands[0].tgt : undefined;
+    // 3. otherwise a near-identical name in the same state
+    if (!targetId) {
+      const k = nameKey(from.name);
+      const close = official.filter((d) => d.state === from.state && editDistance(nameKey(d.name), k) <= 2);
+      if (close.length === 1) targetId = close[0].id;
+    }
+    const to = official.find((d) => d.id === targetId);
+    if (!to || (from.inchargeId && to.inchargeId)) continue; // never drop an appointed in-charge
+    await mergeDistrict(from.id, to.id);
+    if (from.inchargeId) to.inchargeId = from.inchargeId;
+    merged.push(`${from.name} → ${to.name} (${to.state})`);
+  }
+  return merged;
+}
+
 /**
  * Cross-link the two sources inside each district: a post office whose name matches an LGD village
- * gives that village its pincode, and the village gives the post office its taluk.
+ * gives that village its pincode, and the village gives the post office its taluk. Names are only
+ * linked when they are unique in the district, so two same-named villages never get the wrong pincode.
+ * Grouped before joining so it stays fast at national scale (~6.8 lakh villages, ~1.6 lakh offices).
  */
-async function linkPostOfficesToVillages() {
+export async function linkPostOfficesToVillages() {
   const norm = (col: string) => `lower(regexp_replace(${col}, '[^A-Za-z]', '', 'g'))`;
   const villages = await db.$executeRawUnsafe(`
-    UPDATE "Locality" v SET "pincode" = p."pincode"
-    FROM "Locality" p
-    WHERE v."kind" = 'VILLAGE' AND v."pincode" IS NULL
-      AND p."kind" = 'POST_OFFICE' AND p."districtId" = v."districtId"
-      AND ${norm('p."name"')} = ${norm('v."name"')}`);
+    WITH po AS (
+      SELECT "districtId" AS d, ${norm('"name"')} AS k, min("pincode") AS pin
+      FROM "Locality" WHERE "kind" = 'POST_OFFICE'
+      GROUP BY 1, 2 HAVING count(DISTINCT "pincode") = 1
+    ), vk AS (
+      SELECT "id", "districtId" AS d, ${norm('"name"')} AS k, "pincode",
+             count(*) OVER (PARTITION BY "districtId", ${norm('"name"')}) AS n
+      FROM "Locality" WHERE "kind" = 'VILLAGE'
+    )
+    UPDATE "Locality" v SET "pincode" = po.pin
+    FROM vk JOIN po ON po.d = vk.d AND po.k = vk.k
+    WHERE v."id" = vk."id" AND vk.n = 1 AND vk."pincode" IS NULL`);
   const offices = await db.$executeRawUnsafe(`
-    UPDATE "Locality" p SET "talukId" = v."talukId"
-    FROM "Locality" v
-    WHERE p."kind" = 'POST_OFFICE' AND p."talukId" IS NULL
-      AND v."kind" = 'VILLAGE' AND v."talukId" IS NOT NULL AND v."districtId" = p."districtId"
-      AND ${norm('p."name"')} = ${norm('v."name"')}`);
+    WITH vk AS (
+      SELECT "districtId" AS d, ${norm('"name"')} AS k, min("talukId") AS t
+      FROM "Locality" WHERE "kind" = 'VILLAGE' AND "talukId" IS NOT NULL
+      GROUP BY 1, 2 HAVING count(*) = 1
+    ), pk AS (
+      SELECT "id", "districtId" AS d, ${norm('"name"')} AS k FROM "Locality"
+      WHERE "kind" = 'POST_OFFICE' AND "talukId" IS NULL
+    )
+    UPDATE "Locality" p SET "talukId" = vk.t
+    FROM pk JOIN vk ON vk.d = pk.d AND vk.k = pk.k
+    WHERE p."id" = pk."id"`);
   // Town post offices (e.g. "Tenali H.O") are named after the taluk headquarters, not an LGD village
   const towns = await db.$executeRawUnsafe(`
-    UPDATE "Locality" p SET "talukId" = t."id"
-    FROM "Taluk" t
-    WHERE p."kind" = 'POST_OFFICE' AND p."talukId" IS NULL AND t."districtId" = p."districtId"
-      AND ${norm('p."name"')} = ${norm('t."name"')}`);
+    WITH tk AS (
+      SELECT "districtId" AS d, ${norm('"name"')} AS k, min("id") AS t
+      FROM "Taluk" GROUP BY 1, 2 HAVING count(*) = 1
+    ), pk AS (
+      SELECT "id", "districtId" AS d, ${norm('"name"')} AS k FROM "Locality"
+      WHERE "kind" = 'POST_OFFICE' AND "talukId" IS NULL
+    )
+    UPDATE "Locality" p SET "talukId" = tk.t
+    FROM pk JOIN tk ON tk.d = pk.d AND tk.k = pk.k
+    WHERE p."id" = pk."id"`);
   return { villages, offices: offices + towns };
 }
 
@@ -256,19 +400,40 @@ const text = (v: unknown) => {
   return s && s.toUpperCase() !== "NA" ? s : undefined;
 };
 
-export async function importLocations(input: Readable, onProgress?: (rows: number) => void): Promise<ImportSummary> {
+const csvRecords = (input: Readable) =>
+  input.pipe(
+    parse({ columns: true, bom: true, skip_empty_lines: true, relax_column_count: true, trim: true })
+  ) as AsyncIterable<Record<string, string>>;
+
+/** Import a .csv or .xlsx file from disk (Excel is recognised by its zip signature, not the extension). */
+export async function importLocationFile(path: string, onProgress?: (rows: number) => void) {
+  const head = Buffer.alloc(4);
+  const fd = await open(path, "r");
+  try {
+    await fd.read(head, 0, 4, 0);
+  } finally {
+    await fd.close();
+  }
+  const isXlsx = head[0] === 0x50 && head[1] === 0x4b; // "PK"
+  return importLocations(isXlsx ? xlsxRecords(path) : createReadStream(path), onProgress);
+}
+
+export async function importLocations(
+  input: Readable | AsyncIterable<Record<string, string>>,
+  onProgress?: (rows: number) => void
+): Promise<ImportSummary> {
   const summary: ImportSummary = {
-    format: null, rows: 0, skipped: 0, districtsCreated: [], taluks: 0, localities: 0, villagesGivenPincode: 0, postOfficesGivenTaluk: 0,
+    format: null, rows: 0, skipped: 0, districtsCreated: [], districtsMerged: [], taluks: 0, localities: 0, villagesGivenPincode: 0, postOfficesGivenTaluk: 0,
   };
   const dir = new Directory();
   await dir.load();
   const taluksBefore = await db.taluk.count();
 
-  const parser = input.pipe(parse({ columns: true, bom: true, skip_empty_lines: true, relax_column_count: true, trim: true }));
+  const records = input instanceof Readable ? csvRecords(input) : input;
   let cols: Columns = {};
   let batch: LocalityRow[] = [];
 
-  for await (const record of parser as AsyncIterable<Record<string, string>>) {
+  for await (const record of records) {
     if (!summary.format) {
       const detected = detectColumns(Object.keys(record));
       if (!detected.format) {
@@ -328,11 +493,14 @@ export async function importLocations(input: Readable, onProgress?: (rows: numbe
   onProgress?.(summary.rows);
 
   if (summary.format === "indiapost" || summary.format === "lgd-village") {
+    summary.districtsMerged = await mergeUnmatchedDistricts();
     const linked = await linkPostOfficesToVillages();
     summary.villagesGivenPincode = linked.villages;
     summary.postOfficesGivenTaluk = linked.offices;
   }
   summary.taluks = (await db.taluk.count()) - taluksBefore;
-  summary.districtsCreated = dir.created;
+  // districts that were created and then merged into their LGD twin are no longer "new"
+  const mergedFrom = new Set(summary.districtsMerged.map((m) => m.split(" → ")[0]));
+  summary.districtsCreated = dir.created.filter((c) => !mergedFrom.has(c.split(", ")[0]));
   return summary;
 }

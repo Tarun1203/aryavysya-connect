@@ -265,6 +265,7 @@
     "failed": "இறக்குமதி தோல்வி: {error}",
     "sources": "ஆதாரங்கள்",
     "sourceLgd": "LGD – உள்ளாட்சி அரசு அடைவு (lgdirectory.gov.in)",
-    "sourceIndiaPost": "இந்திய அஞ்சல் – அகில இந்திய அஞ்சல் குறியீட்டு அடைவு (data.gov.in)"
+    "sourceIndiaPost": "இந்திய அஞ்சல் – அகில இந்திய அஞ்சல் குறியீட்டு அடைவு (data.gov.in)",
+    "mergedDistricts": "அதிகாரப்பூர்வ LGD பெயருடன் இணைக்கப்பட்ட மாவட்டங்கள் ({count}):"
   }
 }

@@ -265,6 +265,7 @@
     "failed": "ಆಮದು ವಿಫಲವಾಯಿತು: {error}",
     "sources": "ಮೂಲಗಳು",
     "sourceLgd": "LGD – ಸ್ಥಳೀಯ ಸರ್ಕಾರ ಡೈರೆಕ್ಟರಿ (lgdirectory.gov.in)",
-    "sourceIndiaPost": "ಇಂಡಿಯಾ ಪೋಸ್ಟ್ – ಅಖಿಲ ಭಾರತ ಪಿನ್‌ಕೋಡ್ ಡೈರೆಕ್ಟರಿ (data.gov.in)"
+    "sourceIndiaPost": "ಇಂಡಿಯಾ ಪೋಸ್ಟ್ – ಅಖಿಲ ಭಾರತ ಪಿನ್‌ಕೋಡ್ ಡೈರೆಕ್ಟರಿ (data.gov.in)",
+    "mergedDistricts": "ಅಧಿಕೃತ LGD ಹೆಸರಿಗೆ ವಿಲೀನಗೊಂಡ ಜಿಲ್ಲೆಗಳು ({count}):"
   }
 }

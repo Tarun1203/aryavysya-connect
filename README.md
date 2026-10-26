@@ -154,8 +154,8 @@ The data comes from two official sources. Load them in this order:
 
 You can import them in either of two ways:
 
-- **Command line**, for the large one-time load: `npm run locations:import -- file1.csv file2.csv …`. It writes to the database in `.env`, and asks for `--yes` before writing to any database that isn't on your PC.
-- **Website:** go to **Administration → Locations → Upload CSV** (super admin only).
+- **Command line**, for the large one-time load: `npm run locations:import -- file1.csv file2.xlsx …`. It accepts `.csv` and `.xlsx`, and LGD's **All Villages Of India** Excel export works as-is, taluks included. It writes to the database in `.env`, and asks for `--yes` before writing to any database that isn't on your PC.
+- **Website:** go to **Administration → Locations → Upload CSV** (super admin only). It accepts the same `.csv` and `.xlsx` files.
 
 The importer detects each file type from its columns, and re-importing a file updates the existing rows. It matches names across sources: `ANANTHAPUR` matches Anantapur, and `NELLORE` matches Sri Potti Sriramulu Nellore. India Post data has no taluks, so post offices are linked to the LGD village of the same name. That gives the village its pincode and the post office its taluk. Any district the importer can't match is created and listed in the import summary, so you can spot duplicates.
 

@@ -265,6 +265,7 @@
     "failed": "Import failed: {error}",
     "sources": "Sources",
     "sourceLgd": "LGD – Local Government Directory (lgdirectory.gov.in)",
-    "sourceIndiaPost": "India Post – All India Pincode Directory (data.gov.in)"
+    "sourceIndiaPost": "India Post – All India Pincode Directory (data.gov.in)",
+    "mergedDistricts": "Districts merged into their official LGD name ({count}):"
   }
 }

@@ -265,6 +265,7 @@
     "failed": "దిగుమతి విఫలమైంది: {error}",
     "sources": "మూలాలు",
     "sourceLgd": "LGD – స్థానిక ప్రభుత్వ డైరెక్టరీ (lgdirectory.gov.in)",
-    "sourceIndiaPost": "ఇండియా పోస్ట్ – అఖిల భారత పిన్‌కోడ్ డైరెక్టరీ (data.gov.in)"
+    "sourceIndiaPost": "ఇండియా పోస్ట్ – అఖిల భారత పిన్‌కోడ్ డైరెక్టరీ (data.gov.in)",
+    "mergedDistricts": "అధికారిక LGD పేరులో విలీనమైన జిల్లాలు ({count}):"
   }
 }

@@ -21,7 +21,7 @@ export function UploadLocations() {
       // Raw body (not multipart) so the server can stream-parse very large files
       const res = await fetch("/api/admin/locations/import", {
         method: "POST",
-        headers: { "Content-Type": "text/csv", "X-File-Name": encodeURIComponent(file.name) },
+        headers: { "Content-Type": "application/octet-stream", "X-File-Name": encodeURIComponent(file.name) },
         body: file,
       });
       setResult(await res.json());
@@ -37,7 +37,7 @@ export function UploadLocations() {
     <div className="flex flex-col gap-3">
       <input
         type="file"
-        accept=".csv,text/csv"
+        accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         className="text-sm file:mr-3 file:rounded-lg file:border file:border-line file:bg-surface file:px-3 file:py-2"
       />
@@ -54,6 +54,11 @@ export function UploadLocations() {
             taluks: result.taluks,
             pins: result.villagesGivenPincode,
           })}
+          {result.districtsMerged?.length > 0 && (
+            <div className="mt-2">
+              {t("mergedDistricts", { count: result.districtsMerged.length })} {result.districtsMerged.join("; ")}
+            </div>
+          )}
           {result.districtsCreated.length > 0 && (
             <div className="mt-2 text-warn">
               {t("newDistricts", { count: result.districtsCreated.length })} {result.districtsCreated.join("; ")}
