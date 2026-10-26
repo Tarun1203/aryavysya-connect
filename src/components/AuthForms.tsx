@@ -89,7 +89,7 @@ export function RegisterForm({
             <option value="OTHER">{t("person.other")}</option>
           </Select>
         </Field>
-        <Field label={t("person.gotra")} hint={t("person.gotraHint")}>
+        <Field label={t("person.birthGotra")} hint={t("person.birthGotraHint")}>
           <GotraSelect name="gotraId" gotras={gotras} emptyLabel={t("person.choose")} />
         </Field>
         <Field label={t("person.fatherName")}>

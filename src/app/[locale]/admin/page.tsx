@@ -58,7 +58,7 @@ export default async function PendingClaimsPage({ params }: PageProps<"/[locale]
                   givenName: c.givenName,
                   surname: c.surname,
                   gender: c.gender,
-                  gotraId: c.gotraId,
+                  birthGotraId: c.gotraId,
                   districtId: c.districtId,
                   nativeLocalityId: c.nativeLocalityId,
                   fatherName: c.fatherName,
@@ -87,7 +87,7 @@ export default async function PendingClaimsPage({ params }: PageProps<"/[locale]
               <dl className="grid gap-2 text-sm sm:grid-cols-3">
                 {[
                   [tp("gender"), tp(c.gender.toLowerCase() as "male")],
-                  [tp("gotra"), gotraLabel(c.gotra, locale)],
+                  [tp("birthGotra"), gotraLabel(c.gotra, locale)],
                   [tp("fatherName"), c.fatherName],
                   [tp("motherName"), c.motherName],
                   [tp("birthYear"), c.birthYear],

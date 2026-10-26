@@ -6,6 +6,8 @@ const personInclude = { gotra: true } as const;
 export async function getFamily(personId: string) {
   const person = await db.person.findUnique({ where: { id: personId }, include: {
       ...personInclude,
+      birthGotra: true,
+      maternalGotra: true,
       district: true,
       user: true,
       nativeLocality: { include: { taluk: true, district: true } },

@@ -57,7 +57,7 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
                 { surnameLocal: { contains: w } },
               ],
             })),
-            sp.gotra ? { gotraId: sp.gotra } : {},
+            sp.gotra ? { OR: [{ gotraId: sp.gotra }, { birthGotraId: sp.gotra }] } : {},
             ...placeFilters(sp),
             sp.place ? { nativePlace: { contains: sp.place, mode: "insensitive" as const } } : {},
           ],

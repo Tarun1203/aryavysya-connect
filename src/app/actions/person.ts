@@ -11,6 +11,7 @@ import { personFields, str, type FormState } from "@/lib/forms";
 import { cleanPlaces } from "@/lib/locations/resolve";
 import { findDuplicates } from "@/lib/dedup";
 import { marriageCheck } from "@/lib/marriage";
+import { rulesFor, syncAround } from "@/lib/gotra";
 
 export async function updatePersonAction(personId: string, _: FormState, fd: FormData): Promise<FormState> {
   const t = await getTranslations();
@@ -22,6 +23,7 @@ export async function updatePersonAction(personId: string, _: FormState, fd: For
   const before = await db.person.findUniqueOrThrow({ where: { id: personId } });
   const data = await cleanPlaces(parsed.data);
   await db.person.update({ where: { id: personId }, data: { ...data, updatedById: user!.id } });
+  await syncAround(personId);
   const changed = Object.fromEntries(
     Object.entries(data).filter(([k, v]) => before[k as keyof typeof before] !== v).map(([k, v]) => [k, { from: before[k as keyof typeof before], to: v }])
   );
@@ -40,9 +42,9 @@ export async function addRelativeAction(anchorId: string, relation: Relation, _:
   const parsed = personFields(fd);
   if (!parsed.success) return { error: t("errors.required") };
 
-  const anchor = await db.person.findUniqueOrThrow({ where: { id: anchorId } });
+  const anchor = await db.person.findUniqueOrThrow({ where: { id: anchorId }, include: { district: true } });
   const places = await cleanPlaces(parsed.data);
-  const data = { ...places, districtId: places.districtId ?? anchor.districtId };
+  const data = { ...places, districtId: places.districtId ?? anchor.districtId, gotraId: places.birthGotraId };
 
   // Search first – claim, don't recreate. Until the member confirms none of these is the person,
   // show possible duplicates (matched on the family links and stable facts) instead of saving.
@@ -60,9 +62,19 @@ export async function addRelativeAction(anchorId: string, relation: Relation, _:
     });
     if (duplicates.length) return { duplicates };
   }
-  // A brand-new spouse has no ancestors in the tree yet, so only the gotra can be checked
-  if (relation === "spouse" && data.gotraId && data.gotraId === anchor.gotraId && fd.get("confirmMatch") !== "yes") {
-    return { marriageFlags: ["sagotra"] };
+  // A brand-new spouse has no ancestors in the tree yet, so only the gotras can be checked
+  if (relation === "spouse" && fd.get("confirmMatch") !== "yes") {
+    const rules = await rulesFor(anchor.district?.state);
+    const anchorBirth = anchor.birthGotraId ?? anchor.gotraId;
+    const found = [
+      data.birthGotraId && data.birthGotraId === anchorBirth ? ["sagotra", rules.sagotra] : null,
+      (data.birthGotraId && data.birthGotraId === anchor.maternalGotraId) || (anchorBirth && anchorBirth === data.maternalGotraId)
+        ? ["maternalGotra", rules.maternalGotra]
+        : null,
+    ].filter((x): x is [string, "ALLOW" | "WARN" | "BLOCK"] => !!x && x[1] !== "ALLOW");
+    const block = found.find(([, level]) => level === "BLOCK");
+    if (block) return { error: t(`marriage.blocked_${block[0]}`, { name: "" }) };
+    if (found.length) return { marriageFlags: found.map(([k]) => k) };
   }
 
   const person = await db.$transaction(async (tx) => {
@@ -79,6 +91,8 @@ export async function addRelativeAction(anchorId: string, relation: Relation, _:
       await tx.couple.create({ data: { person1Id: anchorId, person2Id: p.id, proposedById: user!.id, confirmedById: user!.id, confirmedAt: new Date() } });
     return p;
   });
+  await syncAround(person.id);
+  await syncAround(anchorId);
   await audit(user, `add-${relation}`, "Person", person.id, { anchorId, coParentId, confirmedDespiteMatches: confirmed || undefined });
   revalidatePath("/", "layout");
   redirect({ href: `/person/${person.id}`, locale: await getLocale() });
@@ -127,6 +141,8 @@ export async function linkExistingAction(anchorId: string, relation: Relation, _
   } catch {
     return { error: t("person.alreadyLinked") };
   }
+  await syncAround(anchorId);
+  await syncAround(otherId);
   await audit(user, proposed ? "propose-marriage" : `link-${relation}`, "Person", anchorId, {
     otherId,
     ...(relation === "spouse" && fd.get("confirmMatch") === "yes" ? { confirmedDespiteFlags: true } : {}),
@@ -151,6 +167,8 @@ export async function removeLinkAction(kind: "parentChild" | "couple", linkId: s
   if (!allowed) return;
   if (kind === "couple") await db.couple.delete({ where: { id: linkId } });
   else await db.parentChild.delete({ where: { id: linkId } });
+  await syncAround(link[0]);
+  await syncAround(link[1]);
   await audit(user, `unlink-${kind}`, "Person", link[0], { other: link[1] });
   revalidatePath("/", "layout");
   redirect({ href: `/person/${returnTo}`, locale: await getLocale() });

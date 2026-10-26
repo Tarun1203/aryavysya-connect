@@ -6,6 +6,7 @@ import { currentUser } from "@/lib/auth";
 import { audit, canEditPerson } from "@/lib/permissions";
 import { partialDate, str } from "@/lib/forms";
 import { marriageCheck } from "@/lib/marriage";
+import { syncAround } from "@/lib/gotra";
 import type { MarriageStatus } from "@/generated/prisma/client";
 
 /**
@@ -24,6 +25,8 @@ export async function respondMarriageAction(coupleId: string, accept: boolean) {
     // A declined proposal never joined anything, so it is removed; the audit log keeps the record
     await db.couple.delete({ where: { id: coupleId } });
   }
+  // On confirmation the wife takes her husband's gotra; her birth gotra stays
+  if (accept) await Promise.all([syncAround(c.person1Id), syncAround(c.person2Id)]);
   await audit(user, accept ? "accept-marriage" : "decline-marriage", "Person", c.person2Id, { other: c.person1Id, coupleId, proposedById: c.proposedById });
   revalidatePath("/", "layout");
 }
@@ -42,6 +45,8 @@ export async function updateMarriageAction(coupleId: string, fd: FormData) {
   if (!status || !STATUSES.includes(status) || !dates.marriageDate.success || !dates.endDate.success) return;
   const data = { status, marriageDate: dates.marriageDate.data, endDate: status === "CONFIRMED" ? null : dates.endDate.data };
   await db.couple.update({ where: { id: coupleId }, data });
+  // Widowhood / divorce: whether her gotra stays her husband's is a per-region rule
+  await Promise.all([syncAround(c.person1Id), syncAround(c.person2Id)]);
   await audit(user, "update-marriage", "Person", sides[0] ? c.person1Id : c.person2Id, { coupleId, ...data });
   revalidatePath("/", "layout");
 }

@@ -51,6 +51,7 @@ export default async function MatchPage({ params, searchParams }: PageProps<"/[l
                   ? t("sameGotra", { gotra: result.gotraA })
                   : t("differentGotra", { a: result.gotraA, b: result.gotraB })}
             </li>
+            {result.maternalClash && <li>{t("maternalClash", { gotra: result.maternalClash })}</li>}
             {result.common && (
               <li>
                 {t("common", { name: result.common.name, a: result.common.genA, b: result.common.genB })}{" "}

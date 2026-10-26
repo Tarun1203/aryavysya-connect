@@ -26,7 +26,7 @@ export async function createTreeAction(_: CreateTreeState, fd: FormData): Promis
   if (!parsed.success) return { error: t("errors.required") };
   const data = await cleanPlaces(parsed.data);
   // Required at creation: name, gender, gotra, intiperu, native place and its district
-  if (!data.gotraId || !data.districtId || !(data.nativeLocalityId || data.nativePlace)) return { error: t("trees.missingRequired") };
+  if (!data.birthGotraId || !data.districtId || !(data.nativeLocalityId || data.nativePlace)) return { error: t("trees.missingRequired") };
 
   const fatherName = str(fd, "fatherName");
   if (fd.get("confirm") !== "yes") {
@@ -39,7 +39,7 @@ export async function createTreeAction(_: CreateTreeState, fd: FormData): Promis
   }
 
   const founder = await db.$transaction(async (tx) => {
-    const p = await tx.person.create({ data: { ...data, createdById: user!.id, updatedById: user!.id } });
+    const p = await tx.person.create({ data: { ...data, gotraId: data.birthGotraId, createdById: user!.id, updatedById: user!.id } });
     // The father, when known, becomes the generation above – same intiperu, gotra and native place
     if (fatherName) {
       const parts = fatherName.split(/\s+/);
@@ -49,7 +49,8 @@ export async function createTreeAction(_: CreateTreeState, fd: FormData): Promis
           givenName: parts.join(" "),
           surname,
           gender: "MALE",
-          gotraId: data.gotraId,
+          gotraId: data.birthGotraId,
+          birthGotraId: data.birthGotraId,
           nativePlace: data.nativePlace,
           nativeLocalityId: data.nativeLocalityId,
           districtId: data.districtId,

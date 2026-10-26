@@ -18,7 +18,8 @@ export type PersonDefaults = Partial<{
   surnameLocal: string | null;
   aliases: string[];
   gender: string;
-  gotraId: string | null;
+  birthGotraId: string | null;
+  maternalGotraId: string | null;
   isLiving: boolean;
   birthDate: string | null;
   birthPlace: string | null;
@@ -90,8 +91,11 @@ export function PersonForm({ action, defaults = {}, gotras, places = { native: {
             <option value="OTHER">{t("other")}</option>
           </Select>
         </Field>
-        <Field label={t("gotra")} hint={t("gotraHint")}>
-          <GotraSelect name="gotraId" gotras={gotras} defaultValue={d("gotraId")} emptyLabel={t("choose")} />
+        <Field label={t("birthGotra")} hint={t("birthGotraHint")}>
+          <GotraSelect name="birthGotraId" gotras={gotras} defaultValue={d("birthGotraId")} emptyLabel={t("choose")} />
+        </Field>
+        <Field label={t("maternalGotra")} hint={t("maternalGotraHint")}>
+          <GotraSelect name="maternalGotraId" gotras={gotras} defaultValue={d("maternalGotraId")} emptyLabel={t("choose")} />
         </Field>
         {coParents && coParents.length > 0 && (
           <Field label={t("otherParent")}>

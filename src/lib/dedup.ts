@@ -14,7 +14,8 @@ export type NewPerson = {
   surname: string;
   aliases?: string[];
   gender: string;
-  gotraId: string | null;
+  /** Birth gotra – a married woman's own gotra is her husband's, but her birth gotra doesn't change */
+  birthGotraId: string | null;
   districtId: string | null;
   nativeLocalityId: string | null;
   fatherName?: string | null;
@@ -106,7 +107,18 @@ export async function findDuplicates(p: NewPerson, limit = 8): Promise<Duplicate
       id: { notIn: exclude },
       OR: [
         // Records without a gotra yet are still candidates
-        ...(place.length ? [{ AND: [{ OR: place }, ...(p.gotraId ? [{ OR: [{ gotraId: p.gotraId }, { gotraId: null }] }] : [])] }] : []),
+        ...(place.length
+          ? [
+              {
+                AND: [
+                  { OR: place },
+                  ...(p.birthGotraId
+                    ? [{ OR: [{ birthGotraId: p.birthGotraId }, { gotraId: p.birthGotraId }, { gotraId: null, birthGotraId: null }] }]
+                    : []),
+                ],
+              },
+            ]
+          : []),
         ...graph,
       ],
     },
@@ -135,7 +147,7 @@ export async function findDuplicates(p: NewPerson, limit = 8): Promise<Duplicate
       score += 2;
       reasons.push("sameIntiperu");
     }
-    if (p.gotraId && c.gotraId === p.gotraId) reasons.push("sameGotra");
+    if (p.birthGotraId && (c.birthGotraId ?? c.gotraId) === p.birthGotraId) reasons.push("sameGotra");
     if (p.nativeLocalityId && c.nativeLocalityId === p.nativeLocalityId) {
       score += 2;
       reasons.push("sameNativePlace");

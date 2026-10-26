@@ -7,6 +7,7 @@ import { currentUser, type SessionUser } from "@/lib/auth";
 import { adminScope, audit, claimRights, districtWhere } from "@/lib/permissions";
 import { str, type FormState } from "@/lib/forms";
 import { validLocality, validTaluk } from "@/lib/locations/resolve";
+import { syncGotras } from "@/lib/gotra";
 import type { OrgLevel, Role } from "@/generated/prisma/client";
 
 async function admin() {
@@ -56,6 +57,7 @@ export async function approveClaimAction(claimId: string, _: FormState, fd: Form
         surname: claim.surname,
         gender: claim.gender,
         gotraId: claim.gotraId,
+        birthGotraId: claim.gotraId,
         birthDate: claim.birthYear ? String(claim.birthYear) : null,
         nativePlace: claim.nativePlace,
         nativeLocalityId: claim.nativeLocalityId,
@@ -294,4 +296,43 @@ export async function addDistrictAction(_: FormState, fd: FormData): Promise<For
   const d = await db.district.upsert({ where: { state_name: { state, name } }, update: {}, create: { state, name } });
   await audit(u, "create", "District", d.id);
   return done("/admin/districts");
+}
+
+/* ---------- Marriage rules per region (super admin only) ---------- */
+
+const RULE_LEVELS = ["ALLOW", "WARN", "BLOCK"] as const;
+const level = (fd: FormData, k: string) => (RULE_LEVELS as readonly string[]).includes(String(fd.get(k))) ? (String(fd.get(k)) as (typeof RULE_LEVELS)[number]) : "WARN";
+
+/** Women whose own gotra depends on the widowhood / divorce policy of a region (or of every region for "*"). */
+async function resyncEndedMarriages(state: string) {
+  const ended = await db.couple.findMany({
+    where: { status: { in: ["WIDOWED", "DIVORCED"] }, ...(state === "*" ? {} : { OR: [{ person1: { district: { state } } }, { person2: { district: { state } } }] }) },
+    select: { person1Id: true, person2Id: true },
+  });
+  await syncGotras(ended.flatMap((c) => [c.person1Id, c.person2Id]));
+}
+
+export async function saveMarriageRuleAction(state: string, fd: FormData) {
+  const { u, scope } = await admin();
+  if (scope.kind !== "all") return;
+  const data = {
+    sagotra: level(fd, "sagotra"),
+    maternalGotra: level(fd, "maternalGotra"),
+    menarikam: level(fd, "menarikam"),
+    keepGotraAfterMarriageEnds: fd.get("keepGotra") === "on",
+    updatedById: u.id,
+  };
+  await db.marriageRule.upsert({ where: { state }, update: data, create: { state, ...data } });
+  await audit(u, "save-marriage-rule", "MarriageRule", state, data);
+  await resyncEndedMarriages(state);
+  done("/admin/rules");
+}
+
+export async function deleteMarriageRuleAction(state: string) {
+  const { u, scope } = await admin();
+  if (scope.kind !== "all" || state === "*") return;
+  await db.marriageRule.deleteMany({ where: { state } });
+  await audit(u, "delete-marriage-rule", "MarriageRule", state);
+  await resyncEndedMarriages(state);
+  done("/admin/rules");
 }

@@ -35,6 +35,7 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
       ? [
           { href: "/admin/trees", label: t("tabTrees") },
           { href: "/admin/gotras", label: t("tabGotras") },
+          { href: "/admin/rules", label: t("tabRules") },
           { href: "/admin/districts", label: t("tabDistricts") },
           { href: "/admin/locations", label: tl("tab") },
         ]

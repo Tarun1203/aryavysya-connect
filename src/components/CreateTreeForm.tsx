@@ -42,8 +42,11 @@ export function CreateTreeForm({ gotras }: { gotras: GotraOption[] }) {
             <option value="OTHER">{t("person.other")}</option>
           </Select>
         </Field>
-        <Field label={`${t("person.gotra")} *`} hint={t("person.gotraHint")}>
-          <GotraSelect name="gotraId" gotras={gotras} emptyLabel={t("person.choose")} required />
+        <Field label={`${t("person.birthGotra")} *`} hint={t("person.birthGotraHint")}>
+          <GotraSelect name="birthGotraId" gotras={gotras} emptyLabel={t("person.choose")} required />
+        </Field>
+        <Field label={t("person.maternalGotra")} hint={t("person.maternalGotraHint")}>
+          <GotraSelect name="maternalGotraId" gotras={gotras} emptyLabel={t("person.choose")} />
         </Field>
         <Field label={t("person.fatherName")} hint={t("trees.fatherHint")}>
           <Input name="fatherName" />

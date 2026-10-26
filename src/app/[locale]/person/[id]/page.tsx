@@ -24,6 +24,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
   const format = await getFormatter();
   const { person, parents, spouses, children, siblings, proposals } = family;
   const tm = await getTranslations("marriage");
+  const marriedWoman = person.gender === "FEMALE" && spouses.some((s) => s.person.gender === "MALE");
 
   const [editable, canParent, canChild, canSpouse] = await Promise.all([
     canEditPerson(user, id),
@@ -36,7 +37,9 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
     : [];
 
   const details: [string, string | null | undefined][] = [
-    [t("gotra"), gotraLabel(person.gotra, locale)],
+    // Married woman: own gotra (her husband's) + her birth gotra; everyone else: own + mother's gotra
+    [t("ownGotra"), gotraLabel(person.gotra, locale)],
+    marriedWoman ? [t("birthGotraMaiden"), gotraLabel(person.birthGotra, locale)] : [t("maternalGotra"), gotraLabel(person.maternalGotra, locale)],
     [t("kulas"), person.gotra?.kulas.join(", ")],
     [t("birthDate"), person.birthDate],
     [t("birthPlace"), placeLine(person.birthPlace, person.birthLocality)],

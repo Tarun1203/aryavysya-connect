@@ -104,9 +104,12 @@ export async function ancestorsOf(personId: string, depth = 7): Promise<Map<stri
 }
 
 export type MatchResult = {
+  /** Same birth gotra (sagotra) – a married woman is compared by her birth gotra, not her husband's */
   sameGotra: boolean;
   gotraA: string | null;
   gotraB: string | null;
+  /** One side's birth gotra is the other's mother's gotra */
+  maternalClash: string | null;
   /** Nearest shared ancestor, if the two are blood relatives within 7 generations */
   common: { id: string; name: string; genA: number; genB: number } | null;
   /** "cross" = menarikam (children of a brother and a sister); "parallel" = children of two brothers / two sisters */
@@ -117,9 +120,13 @@ export type MatchResult = {
 /** Traditional marriage-compatibility check between two people in the tree. */
 export async function checkMatch(aId: string, bId: string): Promise<MatchResult> {
   const [a, b] = await Promise.all(
-    [aId, bId].map((id) => db.person.findUniqueOrThrow({ where: { id }, include: { gotra: true } }))
+    [aId, bId].map((id) => db.person.findUniqueOrThrow({ where: { id }, include: { gotra: true, birthGotra: true, maternalGotra: true } }))
   );
-  const sameGotra = !!a.gotraId && a.gotraId === b.gotraId;
+  const birthA = a.birthGotra ?? a.gotra;
+  const birthB = b.birthGotra ?? b.gotra;
+  const sameGotra = !!birthA && birthA.id === birthB?.id;
+  const maternalClash =
+    (birthA && birthA.id === b.maternalGotraId ? birthA.name : null) ?? (birthB && birthB.id === a.maternalGotraId ? birthB.name : null);
 
   const [ancA, ancB] = await Promise.all([ancestorsOf(aId), ancestorsOf(bId)]);
   ancA.set(aId, 0);
@@ -146,12 +153,13 @@ export async function checkMatch(aId: string, bId: string): Promise<MatchResult>
 
   let verdict: MatchResult["verdict"] = "ok";
   if (sameGotra) verdict = "not-permitted";
+  else if (maternalClash && !common) verdict = "caution";
   else if (common) {
     const close = common.genA <= 1 || common.genB <= 1 || (common.genA === 2 && common.genB === 2 && cousinType === "parallel");
     verdict = close ? "not-permitted" : "caution";
   }
 
-  return { sameGotra, gotraA: a.gotra?.name ?? null, gotraB: b.gotra?.name ?? null, common, cousinType, verdict };
+  return { sameGotra, gotraA: birthA?.name ?? null, gotraB: birthB?.name ?? null, maternalClash, common, cousinType, verdict };
 }
 
 /** The parent of `personId` who is a child of `ancestorId`. */

@@ -40,7 +40,8 @@ export function personFields(fd: FormData) {
       surnameLocal: z.string().nullable(),
       aliases: z.array(z.string()),
       gender,
-      gotraId: z.string().nullable(),
+      birthGotraId: z.string().nullable(),
+      maternalGotraId: z.string().nullable(),
       isLiving: z.boolean(),
       birthDate: partialDate,
       birthPlace: z.string().nullable(),
@@ -64,7 +65,9 @@ export function personFields(fd: FormData) {
       surnameLocal: str(fd, "surnameLocal"),
       aliases: splitList(str(fd, "aliases")),
       gender: str(fd, "gender"),
-      gotraId: str(fd, "gotraId"),
+      // The own (swa) gotra is derived from these and the marriages – see lib/gotra.ts
+      birthGotraId: str(fd, "birthGotraId"),
+      maternalGotraId: str(fd, "maternalGotraId"),
       isLiving: fd.get("isLiving") === "on",
       birthDate: str(fd, "birthDate"),
       // Typed text wins; otherwise use the place picked in the location directory

@@ -35,10 +35,13 @@ export default async function AddRelativePage({ params }: PageProps<"/[locale]/p
 
   // Sensible defaults: a child inherits the father's intiperu and gotra
   const father = relation === "child" ? (person.gender === "MALE" ? person : spouses.find((s) => s.person.gender === "MALE")?.person) : null;
+  const mother = relation === "child" ? (person.gender === "FEMALE" ? person : spouses.find((s) => s.person.gender === "FEMALE")?.person) : null;
   const defaults: PersonDefaults = {
     districtId: person.districtId,
     nativePlace: person.nativePlace,
-    ...(relation === "child" && father ? { surname: father.surname, gotraId: father.gotraId } : {}),
+    // A child's birth gotra is the father's own gotra; their mother's gotra is her birth gotra
+    ...(relation === "child" && father ? { surname: father.surname, birthGotraId: father.gotraId } : {}),
+    ...(relation === "child" && mother ? { maternalGotraId: mother.birthGotraId ?? mother.gotraId } : {}),
     ...(relation === "parent" && person.gender ? { surname: person.surname } : {}),
     ...(relation === "spouse" ? { gender: person.gender === "MALE" ? "FEMALE" : "MALE", nativePlace: null } : {}),
   };

@@ -53,6 +53,12 @@ enum MarriageStatus {
   DIVORCED
 }
 
+enum RuleLevel {
+  ALLOW // not checked
+  WARN // shown; the member must confirm, and the confirmation is audited
+  BLOCK
+}
+
 enum ClaimStatus {
   PENDING
   APPROVED
@@ -176,8 +182,10 @@ model Gotra {
   nameTa String?
   rishi  String?
 
-  persons Person[]
-  claims  FamilyClaim[]
+  persons         Person[]
+  birthPersons    Person[]      @relation("BirthGotra")
+  maternalPersons Person[]      @relation("MaternalGotra")
+  claims          FamilyClaim[]
 }
 
 model User {
@@ -282,9 +290,16 @@ model Person {
   aliases        String[] @default([])
   gender         Gender
 
-  /// Gotra by birth (inherited from the father). Used for sagotra checks.
-  gotraId String?
-  gotra   Gotra?  @relation(fields: [gotraId], references: [id])
+  /// Swa gotra (own): the father's for men and unmarried women; a married woman's becomes her
+  /// husband's. Derived from the fields below and the marriages – see src/lib/gotra.ts.
+  gotraId         String?
+  gotra           Gotra?  @relation(fields: [gotraId], references: [id])
+  /// Birth gotra (puttinti): the father's gotra at birth. Never changes with marriage.
+  birthGotraId    String?
+  birthGotra      Gotra?  @relation("BirthGotra", fields: [birthGotraId], references: [id])
+  /// The mother's birth gotra – shown for children and used in the marriage check
+  maternalGotraId String?
+  maternalGotra   Gotra?  @relation("MaternalGotra", fields: [maternalGotraId], references: [id])
 
   isLiving         Boolean   @default(true)
   /// Free-form dates: "1952", "1952-03" or "1952-03-14"
@@ -379,4 +394,21 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([entity, entityId])
+}
+
+/// Marriage customs differ by region, so the marriage check reads its rules per state.
+/// The row with state "*" is the default for states without their own row.
+model MarriageRule {
+  id                         String    @id @default(cuid())
+  state                      String    @unique
+  /// Same birth gotra on both sides
+  sagotra                    RuleLevel @default(WARN)
+  /// One side's gotra is the other's mother's gotra
+  maternalGotra              RuleLevel @default(WARN)
+  /// Cross cousins (children of a brother and a sister)
+  menarikam                  RuleLevel @default(WARN)
+  /// After widowhood or divorce a woman keeps her husband's gotra (otherwise back to her birth gotra)
+  keepGotraAfterMarriageEnds Boolean   @default(true)
+  updatedById                String?
+  updatedAt                  DateTime  @updatedAt
 }
