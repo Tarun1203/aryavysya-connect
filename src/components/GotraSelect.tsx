@@ -13,11 +13,13 @@ export function GotraSelect({
   gotras,
   defaultValue,
   emptyLabel,
+  required,
 }: {
   name: string;
   gotras: GotraOption[];
   defaultValue?: string | null;
   emptyLabel: string;
+  required?: boolean;
 }) {
   const t = useTranslations("person");
   const [value, setValue] = useState(defaultValue ?? "");
@@ -40,7 +42,7 @@ export function GotraSelect({
   return (
     <div className="flex flex-col gap-2">
       <Input type="search" value={query} onChange={(e) => search(e.target.value)} placeholder={t("findGotra")} aria-label={t("findGotra")} />
-      <Select name={name} value={value} onChange={(e) => setValue(e.target.value)}>
+      <Select name={name} required={required} value={value} onChange={(e) => setValue(e.target.value)}>
         <option value="">{q && matches.length === (selected ? 1 : 0) && !found(query).length ? t("noGotraMatch") : emptyLabel}</option>
         {matches.map((g) => {
           const hit = kulaHit(g);

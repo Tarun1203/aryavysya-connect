@@ -109,7 +109,13 @@
     "removeLink": "Remove link",
     "kulas": "Sankethanamam (kula names)",
     "findGotra": "Type a gotra or kula name to find it",
-    "noGotraMatch": "No gotra or kula name matches"
+    "noGotraMatch": "No gotra or kula name matches",
+    "aliases": "Other names",
+    "aliasesHint": "Birth name, married name or other spellings, separated by commas",
+    "currentCity": "Current city",
+    "status_UNCLAIMED": "Not yet registered",
+    "status_CLAIMED": "Registered member",
+    "status_MERGED": "Merged"
   },
   "tree": {
     "title": "Family tree of {name}",
@@ -257,7 +263,8 @@
     "gotraNo": "No",
     "gotraName": "Gothiram name",
     "sankethanamam": "Sankethanamam",
-    "edit": "Edit"
+    "edit": "Edit",
+    "tabTrees": "Family trees"
   },
   "errors": {
     "required": "Please fill in the required fields",
@@ -296,5 +303,32 @@
     "sourceLgd": "LGD – Local Government Directory (lgdirectory.gov.in)",
     "sourceIndiaPost": "India Post – All India Pincode Directory (data.gov.in)",
     "mergedDistricts": "Districts merged into their official LGD name ({count}):"
+  },
+  "trees": {
+    "createTitle": "Start a new family tree",
+    "createHint": "Add the first known person of a family. Then open their page to add parents, spouse and children.",
+    "missingRequired": "Gotra and native place (with its district) are required to start a tree.",
+    "fatherHint": "Optional. If given, the father is added one generation above, and it helps find duplicates.",
+    "possibleDuplicates": "{count, plural, one {This person may already be in the tree} other {These # people may already be in the tree}}",
+    "duplicatesHint": "Matched on gotra, native place, father, birth year and star – not on the name alone. Open the existing record and add to it instead of creating a second one.",
+    "reason_sameName": "Same name",
+    "reason_similarName": "Similar name",
+    "reason_sameIntiperu": "Same intiperu",
+    "reason_sameGotra": "Same gotra",
+    "reason_sameNativePlace": "Same native place",
+    "reason_sameFather": "Same father",
+    "reason_closeBirthYear": "Birth year within 2",
+    "reason_sameStar": "Same nakshatra & rasi",
+    "openExisting": "Open this record",
+    "createAnyway": "None of these – create a new tree",
+    "checkAndCreate": "Check for duplicates and create",
+    "checkAgain": "Check again",
+    "people": "People in the trees",
+    "claimed": "Registered members",
+    "unclaimed": "Not yet registered",
+    "unclaimedHint": "Added by a relative or an admin. When that person registers, their in-charge links them to this record instead of creating a new one.",
+    "recent": "Recently started trees",
+    "noneYet": "No trees started here yet.",
+    "rulesNote": "Every person keeps a permanent member code (AVC-…). Each new record is checked for duplicates and written to the audit log."
   }
 }

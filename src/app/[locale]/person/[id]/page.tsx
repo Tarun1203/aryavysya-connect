@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
+import { Link, redirect } from "@/i18n/navigation";
 import { db } from "@/lib/db";
 import { requireViewer } from "@/lib/guard";
 import { canAddRelative, canEditPerson, isAdmin } from "@/lib/permissions";
 import { getFamily } from "@/lib/tree";
-import { fullName, gotraLabel, lifeSpan } from "@/lib/reference";
+import { fullName, gotraLabel, lifeSpan, memberCode } from "@/lib/reference";
 import { removeLinkAction } from "@/app/actions/person";
 import { Card, Notice } from "@/components/ui";
 
@@ -17,6 +17,8 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
   const user = await requireViewer(locale);
   const family = await getFamily(id);
   if (!family) notFound();
+  // A merged-away record keeps its id and points to the surviving one
+  if (family.person.status === "MERGED" && family.person.mergedIntoId) redirect({ href: `/person/${family.person.mergedIntoId}`, locale });
   const t = await getTranslations("person");
   const format = await getFormatter();
   const { person, parents, spouses, children, siblings } = family;
@@ -44,6 +46,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
     [t("rasi"), person.rasi],
     [t("kuladevata"), person.kuladevata],
     [t("occupation"), person.occupation],
+    [t("currentCity"), person.currentCity],
   ];
 
   const PersonLink = ({ p, linkId, kind }: { p: P; linkId?: string; kind?: "parentChild" | "couple" }) => (
@@ -76,8 +79,13 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
             <p className="text-xl">{[person.givenNameLocal, person.surnameLocal].filter(Boolean).join(" ")}</p>
           )}
           <p className="mt-1 text-muted">
-            {lifeSpan(person)} · {person.isLiving ? t("living") : t("deceased")}
+            {[lifeSpan(person), person.isLiving ? t("living") : t("deceased"), memberCode(person.memberNo), t(`status_${person.status}`)].filter(Boolean).join(" · ")}
           </p>
+          {person.aliases.length > 0 && (
+            <p className="text-sm text-muted">
+              {t("aliases")}: {person.aliases.join(", ")}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/tree/${id}`} className="rounded-lg border border-line bg-surface px-4 py-2 text-sm font-semibold hover:bg-brand-soft">
@@ -184,5 +192,7 @@ type LinkedPlace = { name: string; pincode: string | null; taluk: { name: string
 function placeLine(text: string | null, place: LinkedPlace) {
   if (!place) return text;
   const linked = [place.name, place.taluk?.name, place.district.name, place.district.state].filter(Boolean).join(", ") + (place.pincode ? ` – ${place.pincode}` : "");
-  return text && !linked.toLowerCase().startsWith(text.toLowerCase()) ? `${text} (${linked})` : linked;
+  // Text filled in from the picker itself starts with the place name – showing it again would repeat it
+  const repeats = !text || text.toLowerCase().startsWith(place.name.toLowerCase()) || linked.toLowerCase().startsWith(text.toLowerCase());
+  return repeats ? linked : `${text} (${linked})`;
 }

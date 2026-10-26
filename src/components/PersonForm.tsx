@@ -14,6 +14,7 @@ export type PersonDefaults = Partial<{
   surname: string;
   givenNameLocal: string | null;
   surnameLocal: string | null;
+  aliases: string[];
   gender: string;
   gotraId: string | null;
   isLiving: boolean;
@@ -26,6 +27,7 @@ export type PersonDefaults = Partial<{
   rasi: string | null;
   kuladevata: string | null;
   occupation: string | null;
+  currentCity: string | null;
   notes: string | null;
   districtId: string | null;
 }>;
@@ -63,6 +65,11 @@ export function PersonForm({ action, defaults = {}, gotras, places = { native: {
         <Field label={t("surnameLocal")}>
           <Input name="surnameLocal" defaultValue={d("surnameLocal")} />
         </Field>
+        <div className="sm:col-span-2">
+          <Field label={t("aliases")} hint={t("aliasesHint")}>
+            <Input name="aliases" defaultValue={defaults.aliases?.join(", ") ?? ""} />
+          </Field>
+        </div>
         <Field label={`${t("gender")} *`}>
           <Select name="gender" defaultValue={d("gender")} required>
             <option value="">{t("choose")}</option>
@@ -124,6 +131,9 @@ export function PersonForm({ action, defaults = {}, gotras, places = { native: {
         </Field>
         <Field label={t("occupation")}>
           <Input name="occupation" defaultValue={d("occupation")} />
+        </Field>
+        <Field label={t("currentCity")}>
+          <Input name="currentCity" defaultValue={d("currentCity")} />
         </Field>
         <div className="sm:col-span-2">
           <Field label={t("notes")}>

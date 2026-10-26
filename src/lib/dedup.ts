@@ -1,0 +1,154 @@
+import "server-only";
+import { db } from "@/lib/db";
+import { memberCode } from "@/lib/reference";
+
+/**
+ * Duplicate detection for new people. Names vary by transliteration and can change, so they are
+ * only a supporting signal: candidates are blocked on gotra + place, then scored on the family
+ * graph (father's name) and stable facts (nakshatra, rasi, birth year). A human always decides –
+ * nothing is merged automatically.
+ */
+export type NewPerson = {
+  givenName: string;
+  surname: string;
+  aliases?: string[];
+  gender: string;
+  gotraId: string | null;
+  districtId: string | null;
+  nativeLocalityId: string | null;
+  fatherName?: string | null;
+  birthYear?: number | null;
+  nakshatra?: string | null;
+  rasi?: string | null;
+};
+
+export type Duplicate = {
+  id: string;
+  memberNo: number;
+  code: string;
+  name: string;
+  detail: string;
+  score: number;
+  reasons: string[];
+};
+
+/** Collapse common Telugu/Kannada/Tamil transliteration variants: Srinivasa / Sreenivas / Shrinivaasa. */
+export function phonetic(s: string) {
+  return s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z]/g, "")
+    .replace(/x/g, "ks")
+    .replace(/sh|ss|z/g, "s")
+    .replace(/([bcdgjkpt])h/g, "$1")
+    .replace(/w/g, "v")
+    .replace(/ee|ii|y(?=[^aeiou]|$)/g, "i")
+    .replace(/oo|uu/g, "u")
+    .replace(/aa/g, "a")
+    .replace(/(.)\1+/g, "$1")
+    .replace(/a$/, "");
+}
+
+function distance(a: string, b: string) {
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return row[b.length];
+}
+
+/** 2 = same name, 1 = close (one or two letters apart), 0 = different. */
+function nameMatch(a: string[], b: string[]) {
+  let best = 0;
+  for (const x of a.map(phonetic).filter(Boolean))
+    for (const y of b.map(phonetic).filter(Boolean)) {
+      if (x === y) return 2;
+      if (Math.min(x.length, y.length) >= 4 && distance(x, y) <= (x.length > 7 ? 2 : 1)) best = 1;
+    }
+  return best;
+}
+
+const yearOf = (d: string | null) => (d ? Number(d.slice(0, 4)) : null);
+
+export async function findDuplicates(p: NewPerson, limit = 8): Promise<Duplicate[]> {
+  // Block: blood relatives share the gotra, and a family keeps its native place / district
+  const place = [
+    p.nativeLocalityId ? { nativeLocalityId: p.nativeLocalityId } : null,
+    p.districtId ? { districtId: p.districtId } : null,
+  ].filter((x) => x !== null);
+  if (!place.length) return [];
+  const candidates = await db.person.findMany({
+    where: {
+      status: { not: "MERGED" },
+      // Records without a gotra yet are still candidates
+      AND: [{ OR: place }, ...(p.gotraId ? [{ OR: [{ gotraId: p.gotraId }, { gotraId: null }] }] : [])],
+    },
+    include: {
+      gotra: true,
+      nativeLocality: true,
+      district: true,
+      asChild: { include: { parent: true } },
+    },
+    take: 2000,
+  });
+
+  const given = [p.givenName, ...(p.aliases ?? [])];
+  const scored = candidates.map((c) => {
+    const reasons: string[] = [];
+    let score = 0;
+    const g = nameMatch(given, [c.givenName, ...c.aliases]);
+    if (g) {
+      score += g === 2 ? 3 : 2;
+      reasons.push(g === 2 ? "sameName" : "similarName");
+    }
+    if (nameMatch([p.surname], [c.surname]) === 2) {
+      score += 2;
+      reasons.push("sameIntiperu");
+    }
+    if (p.gotraId && c.gotraId === p.gotraId) reasons.push("sameGotra");
+    if (p.nativeLocalityId && c.nativeLocalityId === p.nativeLocalityId) {
+      score += 2;
+      reasons.push("sameNativePlace");
+    }
+    const father = c.asChild.map((l) => l.parent).find((x) => x.gender === "MALE");
+    if (p.fatherName && father && nameMatch([p.fatherName], [`${father.givenName} ${father.surname}`, father.givenName, ...father.aliases]) === 2) {
+      score += 4;
+      reasons.push("sameFather");
+    }
+    const year = yearOf(c.birthDate);
+    if (p.birthYear && year && Math.abs(p.birthYear - year) <= 2) {
+      score += 2;
+      reasons.push("closeBirthYear");
+    }
+    if (p.nakshatra && c.nakshatra === p.nakshatra && p.rasi && c.rasi === p.rasi) {
+      score += 2;
+      reasons.push("sameStar");
+    }
+    if (c.gender !== p.gender) score -= 4;
+    return {
+      id: c.id,
+      memberNo: c.memberNo,
+      code: memberCode(c.memberNo),
+      name: `${c.givenName} ${c.surname}`,
+      detail: [c.birthDate?.slice(0, 4), c.gotra?.name, c.nativeLocality?.name ?? c.nativePlace, c.district?.name, father && `s/o ${father.givenName}`]
+        .filter(Boolean)
+        .join(" · "),
+      score,
+      reasons,
+      named: g > 0,
+    };
+  });
+  // A name alone never flags a duplicate, and neither do place + gotra without some name likeness
+  return scored
+    .filter((d) => d.named && d.score >= 5)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((d) => ({ id: d.id, memberNo: d.memberNo, code: d.code, name: d.name, detail: d.detail, score: d.score, reasons: d.reasons }));
+}

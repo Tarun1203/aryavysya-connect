@@ -40,6 +40,12 @@ enum Gender {
   OTHER
 }
 
+enum PersonStatus {
+  UNCLAIMED // added by a relative or an admin; nobody has registered as this person yet
+  CLAIMED // a registered member is this person
+  MERGED // duplicate folded into mergedIntoId
+}
+
 enum ClaimStatus {
   PENDING
   APPROVED
@@ -152,10 +158,10 @@ model Organization {
 
 /// One of the 102 Arya Vysya gotras (managed by super admins).
 model Gotra {
-  id     String  @id @default(cuid())
+  id     String   @id @default(cuid())
   /// Position in the traditional list of 102 gotras
-  no     Int?    @unique
-  name   String  @unique
+  no     Int?     @unique
+  name   String   @unique
   /// Sankethanamams (kula names) that belong to this gotra
   kulas  String[] @default([])
   nameTe String?
@@ -250,13 +256,21 @@ model FamilyClaim {
 }
 
 model Person {
-  id String @id @default(cuid())
+  /// Opaque, immutable identity – never shown, never keyed on a name, phone or ID
+  id           String       @id @default(cuid())
+  /// Human-facing member code (shown as AVC-000123); a label for support, not the identity
+  memberNo     Int          @unique @default(autoincrement())
+  status       PersonStatus @default(UNCLAIMED)
+  /// Set when this record was merged into another; lookups redirect there
+  mergedIntoId String?
 
   givenName      String
   /// Intiperu – the family (house) name
   surname        String
   givenNameLocal String?
   surnameLocal   String?
+  /// Other names this person is known by (birth name, married name, aka) – a name change updates, never duplicates
+  aliases        String[] @default([])
   gender         Gender
 
   /// Gotra by birth (inherited from the father). Used for sagotra checks.
@@ -281,6 +295,7 @@ model Person {
   rasi             String?
   kuladevata       String?   @default("Vasavi Kanyaka Parameswari")
   occupation       String?
+  currentCity      String?
   notes            String?
 
   districtId String?

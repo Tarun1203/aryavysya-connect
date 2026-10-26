@@ -8,6 +8,9 @@ export function str(fd: FormData, key: string): string | null {
   return t ? t : null;
 }
 
+/** Comma-separated list field ("Lakshmi, Laxmi Devi"), trimmed and de-duplicated. */
+export const splitList = (v: string | null) => [...new Set((v ?? "").split(",").map((s) => s.trim().replace(/s+/g, " ")).filter(Boolean))];
+
 export const partialDate = z
   .string()
   .regex(/^\d{4}(-\d{2}(-\d{2})?)?$/)
@@ -25,6 +28,7 @@ export function personFields(fd: FormData) {
       surname: z.string().min(1),
       givenNameLocal: z.string().nullable(),
       surnameLocal: z.string().nullable(),
+      aliases: z.array(z.string()),
       gender,
       gotraId: z.string().nullable(),
       isLiving: z.boolean(),
@@ -37,6 +41,7 @@ export function personFields(fd: FormData) {
       rasi: z.string().nullable(),
       kuladevata: z.string().nullable(),
       occupation: z.string().nullable(),
+      currentCity: z.string().nullable(),
       notes: z.string().nullable(),
       districtId: z.string().nullable(),
       nativeLocalityId: z.string().nullable(),
@@ -47,6 +52,7 @@ export function personFields(fd: FormData) {
       surname: str(fd, "surname") ?? "",
       givenNameLocal: str(fd, "givenNameLocal"),
       surnameLocal: str(fd, "surnameLocal"),
+      aliases: splitList(str(fd, "aliases")),
       gender: str(fd, "gender"),
       gotraId: str(fd, "gotraId"),
       isLiving: fd.get("isLiving") === "on",
@@ -60,6 +66,7 @@ export function personFields(fd: FormData) {
       rasi: str(fd, "rasi"),
       kuladevata: str(fd, "kuladevata"),
       occupation: str(fd, "occupation"),
+      currentCity: str(fd, "currentCity"),
       notes: str(fd, "notes"),
       // The person's district is the district of their native place
       districtId: str(fd, "nativeDistrictId") ?? str(fd, "districtId"),

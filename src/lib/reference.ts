@@ -29,6 +29,9 @@ export async function localOrgOptions() {
   return orgs.map((o) => ({ id: o.id, label: o.town ? `${o.name} (${o.town})` : o.name, districtId: o.districtId }));
 }
 
+/** Human-facing member code – a label for display and support, never the identity. */
+export const memberCode = (memberNo: number) => `AVC-${String(memberNo).padStart(6, "0")}`;
+
 export const fullName = (p: { givenName: string; surname: string }) => `${p.givenName} ${p.surname}`;
 
 export const lifeSpan = (p: { birthDate: string | null; deathDate: string | null; isLiving: boolean }) => {

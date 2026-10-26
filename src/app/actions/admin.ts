@@ -69,6 +69,7 @@ export async function approveClaimAction(claimId: string, _: FormState, fd: Form
   }
 
   await db.$transaction([
+    db.person.update({ where: { id: personId }, data: { status: "CLAIMED" } }),
     db.familyClaim.update({
       where: { id: claimId },
       data: { status: "APPROVED", personId, reviewedById: u.id, reviewedAt: new Date(), reviewNote: str(fd, "note") },
