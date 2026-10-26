@@ -19,7 +19,16 @@ export const partialDate = z
 
 export const gender = z.enum(["MALE", "FEMALE", "OTHER"]);
 
-export type FormState = { error?: string; ok?: boolean; duplicates?: Duplicate[] } | undefined;
+export type FormState =
+  | {
+      error?: string;
+      ok?: boolean;
+      duplicates?: Duplicate[];
+      /** Marriage-check flags (sagotra, menarikam …) the member has to confirm before the link is made */
+      marriageFlags?: string[];
+      relative?: string | null;
+    }
+  | undefined;
 
 /** Fields shared by the create-person and edit-person forms. */
 export function personFields(fd: FormData) {

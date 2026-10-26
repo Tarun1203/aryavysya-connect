@@ -9,6 +9,7 @@ import { Button, Card, Field, Input, Notice, Select, Textarea } from "./ui";
 import { LocationPicker, type PickedLocation } from "./LocationPicker";
 import { GotraSelect } from "./GotraSelect";
 import { DuplicateList } from "./DuplicateList";
+import { MarriageFlags } from "./MarriageFlags";
 
 export type PersonDefaults = Partial<{
   givenName: string;
@@ -174,6 +175,21 @@ export function PersonForm({ action, defaults = {}, gotras, places = { native: {
             <Button name="confirm" value="yes" variant="danger" disabled={pending} className="self-start">
               {t("createAnyway")}
             </Button>
+          }
+        />
+      )}
+      {state?.marriageFlags && (
+        <MarriageFlags
+          flags={state.marriageFlags}
+          relative={state.relative}
+          confirm={
+            <>
+              {/* Keep the earlier "not a duplicate" answer when confirming the marriage check */}
+              <input type="hidden" name="confirm" value="yes" />
+              <Button name="confirmMatch" value="yes" variant="danger" disabled={pending}>
+                {t("confirmMarriage")}
+              </Button>
+            </>
           }
         />
       )}

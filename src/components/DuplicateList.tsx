@@ -1,11 +1,12 @@
 "use client";
 
-import { startTransition, useActionState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import type { Duplicate } from "@/lib/dedup";
 import type { FormState } from "@/lib/forms";
 import { Button, Card, Notice } from "./ui";
+import { MarriageFlags } from "./MarriageFlags";
 
 /**
  * Possible duplicates found before creating a person. Each can be opened, or – when adding a
@@ -23,9 +24,12 @@ export function DuplicateList({
 }) {
   const t = useTranslations();
   const [linkState, link, linking] = useActionState(linkAction ?? (async () => undefined), undefined);
-  const linkTo = (id: string) => {
+  const [lastId, setLastId] = useState<string | null>(null);
+  const linkTo = (id: string, confirmMatch = false) => {
+    setLastId(id);
     const fd = new FormData();
     fd.set("otherId", id);
+    if (confirmMatch) fd.set("confirmMatch", "yes");
     startTransition(() => link(fd));
   };
 
@@ -34,6 +38,17 @@ export function DuplicateList({
       <h3 className="font-semibold">{t("trees.possibleDuplicates", { count: duplicates.length })}</h3>
       <p className="text-sm text-muted">{t("trees.duplicatesHint")}</p>
       {linkState?.error && <Notice tone="bad">{linkState.error}</Notice>}
+      {linkState?.marriageFlags && lastId && (
+        <MarriageFlags
+          flags={linkState.marriageFlags}
+          relative={linkState.relative}
+          confirm={
+            <Button type="button" onClick={() => linkTo(lastId, true)} variant="danger" disabled={linking}>
+              {t("person.confirmMarriage")}
+            </Button>
+          }
+        />
+      )}
       <ul className="flex flex-col gap-2">
         {duplicates.map((d) => (
           <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line px-3 py-2">

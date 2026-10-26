@@ -40,7 +40,8 @@ async function childrenOf(ids: string[], v: VirtualEdges): Promise<Map<string, s
 export async function spousesOf(ids: string[], v: VirtualEdges = {}): Promise<Map<string, string[]>> {
   const rows = ids.length
     ? await db.couple.findMany({
-        where: { OR: [{ person1Id: { in: ids } }, { person2Id: { in: ids } }] },
+        // A proposed marriage joins nothing until the other side accepts – it gives no edit rights
+        where: { status: { not: "PROPOSED" }, OR: [{ person1Id: { in: ids } }, { person2Id: { in: ids } }] },
         select: { person1Id: true, person2Id: true },
       })
     : [];

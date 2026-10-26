@@ -5,6 +5,7 @@ import { currentUser } from "@/lib/auth";
 import { editableIds } from "@/lib/permissions";
 import { fullName } from "@/lib/reference";
 import { Card, Notice, PageTitle } from "@/components/ui";
+import { MarriageRequests } from "@/components/MarriageRequests";
 
 export default async function AccountPage({ params }: PageProps<"/[locale]/account">) {
   const { locale } = await params;
@@ -63,6 +64,8 @@ export default async function AccountPage({ params }: PageProps<"/[locale]/accou
       {(u.role === "MEMBER" || u.role === "LOCAL_ADMIN") && scope && scope.size > 0 && (
         <Notice tone="ok">{t("editScope", { count: scope.size })}</Notice>
       )}
+
+      {u.status === "APPROVED" && <MarriageRequests user={u} />}
 
       {claims.length > 0 && (
         <Card>

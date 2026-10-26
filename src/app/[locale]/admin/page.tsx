@@ -8,6 +8,7 @@ import { approveClaimAction, endorseClaimAction, rejectClaimAction } from "@/app
 import { Button, Card, Input, Notice } from "@/components/ui";
 import { ApproveClaimForm } from "./ApproveClaimForm";
 import { findDuplicates } from "@/lib/dedup";
+import { MarriageRequests } from "@/components/MarriageRequests";
 
 export default async function PendingClaimsPage({ params }: PageProps<"/[locale]/admin">) {
   const { locale } = await params;
@@ -34,10 +35,19 @@ export default async function PendingClaimsPage({ params }: PageProps<"/[locale]
     orderBy: { createdAt: "asc" },
   });
 
-  if (!claims.length) return <Notice>{t("noPending")}</Notice>;
+  // In-charges answer marriage links for their area too, when the family hasn't
+  const marriages = scope.kind !== "local" ? <MarriageRequests user={user} /> : null;
+  if (!claims.length)
+    return (
+      <div className="flex flex-col gap-4">
+        {marriages}
+        <Notice>{t("noPending")}</Notice>
+      </div>
+    );
 
   return (
     <div className="flex flex-col gap-4">
+      {marriages}
       {await Promise.all(
         claims.map(async (c) => {
           const rights = await claimRights(user, c);

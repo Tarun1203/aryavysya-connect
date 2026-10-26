@@ -19,9 +19,12 @@ export async function getFamily(personId: string) {
     db.parentChild.findMany({ where: { parentId: personId }, include: { child: { include: personInclude } } }),
     db.couple.findMany({
       where: { OR: [{ person1Id: personId }, { person2Id: personId }] },
-      include: { person1: { include: personInclude }, person2: { include: personInclude } },
+      include: { person1: { include: personInclude }, person2: { include: personInclude }, proposedBy: true },
+      orderBy: [{ marriageDate: "asc" }, { createdAt: "asc" }],
     }),
   ]);
+  const joined = couples.filter((c) => c.status !== "PROPOSED");
+  const other = (c: (typeof couples)[number]) => (c.person1Id === personId ? c.person2 : c.person1);
 
   const parentIds = parentLinks.map((l) => l.parentId);
   const siblingLinks = parentIds.length
@@ -37,7 +40,11 @@ export async function getFamily(personId: string) {
   return {
     person,
     parents: parentLinks.map((l) => ({ linkId: l.id, person: l.parent })).sort((a, b) => (a.person.gender === "MALE" ? -1 : b.person.gender === "MALE" ? 1 : 0)),
-    spouses: couples.map((c) => ({ linkId: c.id, marriageDate: c.marriageDate, person: c.person1Id === personId ? c.person2 : c.person1 })),
+    spouses: joined.map((c) => ({ linkId: c.id, status: c.status, marriageDate: c.marriageDate, endDate: c.endDate, person: other(c) })),
+    /** Marriage links waiting for acceptance; `incoming` when this person's side has to answer */
+    proposals: couples
+      .filter((c) => c.status === "PROPOSED")
+      .map((c) => ({ linkId: c.id, incoming: c.person2Id === personId, proposedBy: c.proposedBy?.name ?? null, person: other(c) })),
     children: childLinks.map((l) => ({ linkId: l.id, person: l.child })).sort((a, b) => byBirth(a.person, b.person)),
     siblings: siblingLinks.map((l) => l.child).sort(byBirth),
   };
@@ -88,7 +95,7 @@ export async function descendants(personId: string, depth = 3): Promise<Descenda
   if (!p) return null;
   const [couples, kids] = await Promise.all([
     db.couple.findMany({
-      where: { OR: [{ person1Id: personId }, { person2Id: personId }] },
+      where: { status: { not: "PROPOSED" }, OR: [{ person1Id: personId }, { person2Id: personId }] },
       include: { person1: { select: nodeSelect }, person2: { select: nodeSelect } },
     }),
     depth > 0 ? db.parentChild.findMany({ where: { parentId: personId }, select: { childId: true } }) : [],

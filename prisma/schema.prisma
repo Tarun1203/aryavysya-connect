@@ -46,6 +46,13 @@ enum PersonStatus {
   MERGED // duplicate folded into mergedIntoId
 }
 
+enum MarriageStatus {
+  PROPOSED // waiting for the other family (or their in-charge) to accept
+  CONFIRMED
+  WIDOWED
+  DIVORCED
+}
+
 enum ClaimStatus {
   PENDING
   APPROVED
@@ -205,10 +212,12 @@ model User {
   approvedAt   DateTime?
   createdAt    DateTime  @default(now())
 
-  claims         FamilyClaim[] @relation("ClaimUser")
-  reviewedClaims FamilyClaim[] @relation("ClaimReviewer")
-  endorsedClaims FamilyClaim[] @relation("ClaimEndorser")
-  audit          AuditLog[]
+  claims             FamilyClaim[] @relation("ClaimUser")
+  reviewedClaims     FamilyClaim[] @relation("ClaimReviewer")
+  endorsedClaims     FamilyClaim[] @relation("ClaimEndorser")
+  audit              AuditLog[]
+  marriagesProposed  Couple[]      @relation("MarriageProposer")
+  marriagesConfirmed Couple[]      @relation("MarriageConfirmer")
 }
 
 /// A member's request to be verified as belonging to a family.
@@ -332,11 +341,24 @@ model ParentChild {
   @@index([childId])
 }
 
+/// A marriage – the link that joins two family charts. person1 is the side that made the link,
+/// person2 the side that has to accept it when they belong to another family's chart.
+/// Remarriage is a new record; ended marriages keep their status and dates.
 model Couple {
-  id           String  @id @default(cuid())
+  id           String         @id @default(cuid())
   person1Id    String
   person2Id    String
+  status       MarriageStatus @default(CONFIRMED)
+  /// Free-form dates like the person dates: "1975", "1975-05" or "1975-05-14"
   marriageDate String?
+  endDate      String?
+
+  proposedById  String?
+  proposedBy    User?     @relation("MarriageProposer", fields: [proposedById], references: [id], onDelete: SetNull)
+  confirmedById String?
+  confirmedBy   User?     @relation("MarriageConfirmer", fields: [confirmedById], references: [id], onDelete: SetNull)
+  confirmedAt   DateTime?
+  createdAt     DateTime  @default(now())
 
   person1 Person @relation("Partner1", fields: [person1Id], references: [id], onDelete: Cascade)
   person2 Person @relation("Partner2", fields: [person2Id], references: [id], onDelete: Cascade)

@@ -7,6 +7,7 @@ import { canAddRelative, canEditPerson, isAdmin } from "@/lib/permissions";
 import { getFamily } from "@/lib/tree";
 import { fullName, gotraLabel, lifeSpan, memberCode } from "@/lib/reference";
 import { removeLinkAction } from "@/app/actions/person";
+import { respondMarriageAction, updateMarriageAction } from "@/app/actions/marriage";
 import { Card, Notice } from "@/components/ui";
 
 type P = { id: string; givenName: string; surname: string; birthDate: string | null; deathDate: string | null; isLiving: boolean; gotra: { name: string; nameTe: string | null; nameKn: string | null; nameTa: string | null } | null };
@@ -21,7 +22,8 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
   if (family.person.status === "MERGED" && family.person.mergedIntoId) redirect({ href: `/person/${family.person.mergedIntoId}`, locale });
   const t = await getTranslations("person");
   const format = await getFormatter();
-  const { person, parents, spouses, children, siblings } = family;
+  const { person, parents, spouses, children, siblings, proposals } = family;
+  const tm = await getTranslations("marriage");
 
   const [editable, canParent, canChild, canSpouse] = await Promise.all([
     canEditPerson(user, id),
@@ -101,6 +103,37 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
 
       <Notice tone={editable ? "ok" : "info"}>{editable ? t("editable") : t("readOnly")}</Notice>
 
+      {proposals.map((pr) => (
+        <Notice key={pr.linkId} tone="warn">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>
+              {pr.incoming ? tm("incoming", { name: fullName(pr.person), by: pr.proposedBy ?? "—" }) : tm("outgoing", { name: fullName(pr.person) })}{" "}
+              <Link href={`/person/${pr.person.id}`} className="underline">
+                {tm("view")}
+              </Link>
+            </span>
+            {editable && (
+              <span className="flex gap-2">
+                {pr.incoming ? (
+                  <>
+                    <form action={respondMarriageAction.bind(null, pr.linkId, true)}>
+                      <button className="rounded-lg bg-brand px-3 py-1 text-sm text-white hover:opacity-90">{tm("accept")}</button>
+                    </form>
+                    <form action={respondMarriageAction.bind(null, pr.linkId, false)}>
+                      <button className="rounded-lg border border-line px-3 py-1 text-sm hover:bg-surface">{tm("decline")}</button>
+                    </form>
+                  </>
+                ) : (
+                  <form action={removeLinkAction.bind(null, "couple", pr.linkId, id)}>
+                    <button className="rounded-lg border border-line px-3 py-1 text-sm hover:bg-surface">{tm("withdraw")}</button>
+                  </form>
+                )}
+              </span>
+            )}
+          </div>
+        </Notice>
+      ))}
+
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <dl className="grid gap-3 text-sm">
@@ -124,7 +157,33 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
           </Section>
           <Section title={t("spouses")} none={t("none")}>
             {spouses.map((s) => (
-              <PersonLink key={s.linkId} p={s.person} linkId={s.linkId} kind="couple" />
+              <li key={s.linkId} className="flex flex-col gap-1">
+                <ul>
+                  <PersonLink p={s.person} linkId={s.linkId} kind="couple" />
+                </ul>
+                <div className="flex flex-wrap items-center gap-2 px-1 text-xs text-muted">
+                  {s.status !== "CONFIRMED" && <span className="rounded-full bg-brand-soft px-2 py-0.5 text-foreground">{tm(`status_${s.status}`)}</span>}
+                  {s.marriageDate && <span>{tm("married", { date: s.marriageDate })}</span>}
+                  {s.endDate && <span>{tm("ended", { date: s.endDate })}</span>}
+                  {editable && (
+                    <details className="w-full">
+                      <summary className="cursor-pointer text-brand hover:underline">{tm("editMarriage")}</summary>
+                      <form action={updateMarriageAction.bind(null, s.linkId)} className="mt-2 grid grid-cols-3 gap-2">
+                        <select name="status" defaultValue={s.status} className="rounded border border-line bg-background px-2 py-1">
+                          {(["CONFIRMED", "WIDOWED", "DIVORCED"] as const).map((st) => (
+                            <option key={st} value={st}>
+                              {tm(`status_${st}`)}
+                            </option>
+                          ))}
+                        </select>
+                        <input name="marriageDate" defaultValue={s.marriageDate ?? ""} placeholder={tm("marriageDate")} pattern="\d{4}(-\d{2}(-\d{2})?)?" className="min-w-0 rounded border border-line bg-background px-2 py-1" />
+                        <input name="endDate" defaultValue={s.endDate ?? ""} placeholder={tm("endDate")} pattern="\d{4}(-\d{2}(-\d{2})?)?" className="min-w-0 rounded border border-line bg-background px-2 py-1" />
+                        <button className="col-span-3 justify-self-start rounded border border-line px-3 py-1 hover:bg-brand-soft">{t("save")}</button>
+                      </form>
+                    </details>
+                  )}
+                </div>
+              </li>
             ))}
           </Section>
           <Section title={t("children")} none={t("none")}>

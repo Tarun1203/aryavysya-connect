@@ -117,7 +117,8 @@
     "status_CLAIMED": "Registered member",
     "status_MERGED": "Merged",
     "createAnyway": "None of these – add as a new person",
-    "checkAgain": "Check again"
+    "checkAgain": "Check again",
+    "confirmMarriage": "I have checked – link them anyway"
   },
   "tree": {
     "title": "Family tree of {name}",
@@ -341,5 +342,35 @@
     "reason_sameSpouse": "Same spouse",
     "alreadyLinkedHere": "Already linked here",
     "linkInstead": "Link this person instead"
+  },
+  "marriage": {
+    "alreadyProposed": "This marriage link is already waiting for the other family to accept.",
+    "blocked_lineal": "Not allowed: one of them is the other's ancestor.",
+    "blocked_siblings": "Not allowed: they are brother and sister (common parent {name}).",
+    "blocked_parallelCousins": "Not allowed: children of two brothers or two sisters count as siblings (common grandparent {name}).",
+    "status_PROPOSED": "Waiting for acceptance",
+    "status_CONFIRMED": "Married",
+    "status_WIDOWED": "Widowed",
+    "status_DIVORCED": "Divorced",
+    "married": "Married {date}",
+    "ended": "Until {date}",
+    "editMarriage": "Marriage details",
+    "marriageDate": "Married (YYYY)",
+    "endDate": "Ended (YYYY)",
+    "incoming": "{by} has proposed a marriage link with {name} from another family. It joins the two family charts once this side accepts.",
+    "outgoing": "Marriage link with {name} is waiting for their family (or their district in-charge) to accept.",
+    "view": "View",
+    "accept": "Accept",
+    "decline": "Decline",
+    "withdraw": "Withdraw",
+    "checkTitle": "Marriage check",
+    "checkHint": "Customs differ between families, so these are shown rather than forbidden. Your confirmation is recorded in the audit log.",
+    "flag_sagotra": "Same gotra (sagotra) – traditionally not permitted.",
+    "flag_menarikam": "Menarikam – children of a brother and a sister.",
+    "flag_bloodRelative": "They are blood relatives (common ancestor {name}).",
+    "requestsTitle": "{count, plural, one {A marriage link is waiting for your answer} other {# marriage links are waiting for your answer}}",
+    "requestsHint": "Another family has linked one of your people as a spouse. Nothing joins the charts until you accept.",
+    "wantsToMarry": "linked as spouse of",
+    "proposedBy": "by {name}"
   }
 }
