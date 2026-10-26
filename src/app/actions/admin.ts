@@ -258,6 +258,27 @@ export async function createOrganizationAction(_: FormState, fd: FormData): Prom
 /** Kula names arrive comma- or dash-separated, as in the community lists. */
 const splitKulas = (text: string) => [...new Set(text.split(/[,\n]|-/).map((k) => k.trim().replace(/\s+/g, " ")).filter(Boolean))];
 
+/**
+ * The kula editor: one kula per line as "English | Telugu | Kannada | Tamil" (scripts optional);
+ * a line without "|" may still hold several comma-separated English names.
+ */
+function kulaFields(text: string) {
+  const kulas: string[] = [];
+  const kulaNames: Record<string, { te?: string; kn?: string; ta?: string }> = {};
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.includes("|")) {
+      for (const k of splitKulas(line)) if (!kulas.includes(k)) kulas.push(k);
+      continue;
+    }
+    const [en, te, kn, ta] = line.split("|").map((s) => s.trim());
+    if (!en || kulas.includes(en)) continue;
+    kulas.push(en);
+    const local = Object.fromEntries(Object.entries({ te, kn, ta }).filter(([, v]) => v));
+    if (Object.keys(local).length) kulaNames[en] = local;
+  }
+  return { kulas, kulaNames };
+}
+
 export async function addGotrasAction(_: FormState, fd: FormData): Promise<FormState> {
   const t = await getTranslations("admin");
   const { u, scope } = await admin();
@@ -280,7 +301,13 @@ export async function updateGotraAction(gotraId: string, fd: FormData) {
   if (scope.kind !== "all") return;
   await db.gotra.update({
     where: { id: gotraId },
-    data: { nameTe: str(fd, "nameTe"), nameKn: str(fd, "nameKn"), nameTa: str(fd, "nameTa"), kulas: splitKulas(str(fd, "kulas") ?? "") },
+    data: {
+      nameTe: str(fd, "nameTe"),
+      nameKn: str(fd, "nameKn"),
+      nameTa: str(fd, "nameTa"),
+      ...kulaFields(str(fd, "kulas") ?? ""),
+      localVerified: fd.get("localVerified") === "on",
+    },
   });
   await audit(u, "update", "Gotra", gotraId);
   done("/admin/gotras");

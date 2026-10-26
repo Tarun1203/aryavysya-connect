@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { requireViewer } from "@/lib/guard";
 import { canAddRelative, canEditPerson, isAdmin } from "@/lib/permissions";
 import { getFamily } from "@/lib/tree";
-import { fullName, gotraLabel, lifeSpan, memberCode } from "@/lib/reference";
+import { fullName, gotraLabel, kulaLabels, lifeSpan, memberCode } from "@/lib/reference";
 import { removeLinkAction } from "@/app/actions/person";
 import { respondMarriageAction, updateMarriageAction } from "@/app/actions/marriage";
 import { Card, Notice } from "@/components/ui";
@@ -40,7 +40,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
     // Married woman: own gotra (her husband's) + her birth gotra; everyone else: own + mother's gotra
     [t("ownGotra"), gotraLabel(person.gotra, locale)],
     marriedWoman ? [t("birthGotraMaiden"), gotraLabel(person.birthGotra, locale)] : [t("maternalGotra"), gotraLabel(person.maternalGotra, locale)],
-    [t("kulas"), person.gotra?.kulas.join(", ")],
+    [t("kulas"), person.gotra && kulaLabels(person.gotra, locale).join(", ")],
     [t("birthDate"), person.birthDate],
     [t("birthPlace"), placeLine(person.birthPlace, person.birthLocality)],
     [t("deathDate"), person.isLiving ? null : person.deathDate],

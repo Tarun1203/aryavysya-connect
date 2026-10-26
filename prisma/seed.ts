@@ -4,16 +4,38 @@ import { db } from "../src/lib/db";
 import { GOTRAS, RENAMED_GOTRAS } from "./data/gotras";
 import { DISTRICTS } from "./data/districts";
 
-async function seedReferenceData() {
+/** Move everything that points at gotra `fromId` to `toId` (when an old name and its new name both exist). */
+async function mergeGotra(fromId: string, toId: string) {
+  await db.$transaction([
+    db.person.updateMany({ where: { gotraId: fromId }, data: { gotraId: toId } }),
+    db.person.updateMany({ where: { birthGotraId: fromId }, data: { birthGotraId: toId } }),
+    db.person.updateMany({ where: { maternalGotraId: fromId }, data: { maternalGotraId: toId } }),
+    db.familyClaim.updateMany({ where: { gotraId: fromId }, data: { gotraId: toId } }),
+    db.gotra.delete({ where: { id: fromId } }),
+  ]);
+}
+
+async function seedGotras() {
   for (const [from, to] of Object.entries(RENAMED_GOTRAS)) {
-    if (!(await db.gotra.findUnique({ where: { name: to } }))) await db.gotra.updateMany({ where: { name: from }, data: { name: to } });
+    const [old, target] = await Promise.all([db.gotra.findUnique({ where: { name: from } }), db.gotra.findUnique({ where: { name: to } })]);
+    if (old && target) await mergeGotra(old.id, target.id);
+    else if (old) await db.gotra.update({ where: { name: from }, data: { name: to } });
   }
-  // The list number and kula names fill in once; after that they belong to the super admins' edits
-  const filled = new Set((await db.gotra.findMany({ where: { no: { not: null } }, select: { name: true } })).map((g) => g.name));
-  for (const { no, name, kulas } of GOTRAS) {
-    if (filled.has(name)) continue;
-    await db.gotra.upsert({ where: { name }, update: { no, kulas }, create: { no, name, kulas } });
+  // The master list is applied in full once (numbers, scripts, kula names); after that the rows
+  // belong to the super admins' edits and only missing gotras are added.
+  const first = GOTRAS[0];
+  const mastered = (await db.gotra.findUnique({ where: { name: first.name } }))?.no === first.no;
+  if (!mastered) await db.gotra.updateMany({ data: { no: null } }); // free the numbers before renumbering
+  const existing = new Set((await db.gotra.findMany({ select: { name: true } })).map((g) => g.name));
+  for (const g of GOTRAS) {
+    const data = { no: g.no, nameTe: g.nameTe, nameKn: g.nameKn, nameTa: g.nameTa, kulas: g.kulas, kulaNames: g.kulaNames, localVerified: false };
+    if (!mastered) await db.gotra.upsert({ where: { name: g.name }, update: data, create: { name: g.name, ...data } });
+    else if (!existing.has(g.name)) await db.gotra.create({ data: { name: g.name, ...data } });
   }
+}
+
+async function seedReferenceData() {
+  await seedGotras();
   // Once the official LGD directory is loaded it owns the districts (and may have renamed or merged
   // the starter ones), so re-adding the starter list on every start would create duplicates.
   if (await db.district.count({ where: { lgdCode: { not: null } } })) {

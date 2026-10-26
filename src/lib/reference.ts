@@ -13,10 +13,21 @@ export function gotraLabel(g: GotraNames | null | undefined, locale: string) {
   return local ? `${local} (${g.name})` : g.name;
 }
 
-/** Gotras in the traditional list order, with their kula names (sankethanamams) for searching. */
+type KulaScripts = Record<string, { te?: string; kn?: string; ta?: string }>;
+
+/** Kula names in the viewer's script, with the English spelling alongside ("అరసకుల (Arasakula)"). */
+export function kulaLabels(g: { kulas: string[]; kulaNames: unknown }, locale: string) {
+  const local = (g.kulaNames ?? {}) as KulaScripts;
+  return g.kulas.map((k) => {
+    const s = locale === "te" || locale === "kn" || locale === "ta" ? local[k]?.[locale] : undefined;
+    return s ? `${s} (${k})` : k;
+  });
+}
+
+/** Gotras in the master list order, with their kula names (sankethanamams) – in both scripts, so either can be typed to find one. */
 export async function gotraOptions(locale: string): Promise<GotraOption[]> {
   const gotras = await db.gotra.findMany({ orderBy: [{ no: { sort: "asc", nulls: "last" } }, { name: "asc" }] });
-  return gotras.map((g) => ({ id: g.id, label: gotraLabel(g, locale)!, kulas: g.kulas }));
+  return gotras.map((g) => ({ id: g.id, label: gotraLabel(g, locale)!, kulas: kulaLabels(g, locale) }));
 }
 
 export async function districtOptions(): Promise<Option[]> {

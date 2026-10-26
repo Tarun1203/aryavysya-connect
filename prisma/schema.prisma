@@ -171,16 +171,20 @@ model Organization {
 
 /// One of the 102 Arya Vysya gotras (managed by super admins).
 model Gotra {
-  id     String   @id @default(cuid())
+  id            String   @id @default(cuid())
   /// Position in the traditional list of 102 gotras
-  no     Int?     @unique
-  name   String   @unique
+  no            Int?     @unique
+  name          String   @unique
   /// Sankethanamams (kula names) that belong to this gotra
-  kulas  String[] @default([])
-  nameTe String?
-  nameKn String?
-  nameTa String?
-  rishi  String?
+  kulas         String[] @default([])
+  /// Kula names in the other scripts, keyed by the English name: { "Arasakula": { te, kn, ta } }
+  kulaNames     Json     @default("{}")
+  /// The Telugu / Kannada / Tamil spellings have been checked by a native speaker
+  localVerified Boolean  @default(false)
+  nameTe        String?
+  nameKn        String?
+  nameTa        String?
+  rishi         String?
 
   persons         Person[]
   birthPersons    Person[]      @relation("BirthGotra")
