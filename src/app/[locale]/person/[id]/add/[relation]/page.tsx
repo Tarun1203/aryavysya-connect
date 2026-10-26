@@ -64,6 +64,7 @@ export default async function AddRelativePage({ params }: PageProps<"/[locale]/p
           places={{ native, birth: {} }}
           coParents={coParents}
           submitLabel={title}
+          linkAction={linkExistingAction.bind(null, id, relation)}
         />
       </section>
       <Card>

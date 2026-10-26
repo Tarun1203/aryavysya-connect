@@ -9,6 +9,7 @@ import { audit, canAddRelative, canEditPerson, canView, type Relation } from "@/
 import { familyScope } from "@/lib/family";
 import { personFields, str, type FormState } from "@/lib/forms";
 import { cleanPlaces } from "@/lib/locations/resolve";
+import { findDuplicates } from "@/lib/dedup";
 
 export async function updatePersonAction(personId: string, _: FormState, fd: FormData): Promise<FormState> {
   const t = await getTranslations();
@@ -40,9 +41,28 @@ export async function addRelativeAction(anchorId: string, relation: Relation, _:
 
   const anchor = await db.person.findUniqueOrThrow({ where: { id: anchorId } });
   const places = await cleanPlaces(parsed.data);
+  const data = { ...places, districtId: places.districtId ?? anchor.districtId };
+
+  // Search first – claim, don't recreate. Until the member confirms none of these is the person,
+  // show possible duplicates (matched on the family links and stable facts) instead of saving.
+  const confirmed = fd.get("confirm") === "yes";
+  if (!confirmed) {
+    const duplicates = await findDuplicates({
+      ...data,
+      birthYear: data.birthDate ? Number(data.birthDate.slice(0, 4)) : null,
+      relatives:
+        relation === "parent"
+          ? { childIds: [anchorId] }
+          : relation === "child"
+            ? { parentIds: [anchorId, ...(coParentId ? [coParentId] : [])] }
+            : { spouseIds: [anchorId] },
+    });
+    if (duplicates.length) return { duplicates };
+  }
+
   const person = await db.$transaction(async (tx) => {
     const p = await tx.person.create({
-      data: { ...places, districtId: places.districtId ?? anchor.districtId, createdById: user!.id, updatedById: user!.id },
+      data: { ...data, createdById: user!.id, updatedById: user!.id },
     });
     if (relation === "parent") await tx.parentChild.create({ data: { parentId: p.id, childId: anchorId } });
     if (relation === "child") {
@@ -52,7 +72,7 @@ export async function addRelativeAction(anchorId: string, relation: Relation, _:
     if (relation === "spouse") await tx.couple.create({ data: { person1Id: anchorId, person2Id: p.id } });
     return p;
   });
-  await audit(user, `add-${relation}`, "Person", person.id, { anchorId, coParentId });
+  await audit(user, `add-${relation}`, "Person", person.id, { anchorId, coParentId, confirmedDespiteMatches: confirmed || undefined });
   revalidatePath("/", "layout");
   redirect({ href: `/person/${person.id}`, locale: await getLocale() });
 }

@@ -7,6 +7,7 @@ import { fullName, gotraLabel, lifeSpan } from "@/lib/reference";
 import { approveClaimAction, endorseClaimAction, rejectClaimAction } from "@/app/actions/admin";
 import { Button, Card, Input, Notice } from "@/components/ui";
 import { ApproveClaimForm } from "./ApproveClaimForm";
+import { findDuplicates } from "@/lib/dedup";
 
 export default async function PendingClaimsPage({ params }: PageProps<"/[locale]/admin">) {
   const { locale } = await params;
@@ -40,6 +41,20 @@ export default async function PendingClaimsPage({ params }: PageProps<"/[locale]
       {await Promise.all(
         claims.map(async (c) => {
           const rights = await claimRights(user, c);
+          // The person registering may already be in the tree, added by a relative – suggest those records
+          const suggestions =
+            rights.approve && !c.personId
+              ? await findDuplicates({
+                  givenName: c.givenName,
+                  surname: c.surname,
+                  gender: c.gender,
+                  gotraId: c.gotraId,
+                  districtId: c.districtId,
+                  nativeLocalityId: c.nativeLocalityId,
+                  fatherName: c.fatherName,
+                  birthYear: c.birthYear,
+                })
+              : [];
           const claimed = c.person
             ? { id: c.person.id, label: fullName(c.person), detail: [lifeSpan(c.person), c.person.gotra?.name].filter(Boolean).join(" · ") }
             : null;
@@ -103,7 +118,7 @@ export default async function PendingClaimsPage({ params }: PageProps<"/[locale]
 
               {rights.approve && (
                 <div className="grid gap-4 border-t border-line pt-4 lg:grid-cols-[2fr_1fr]">
-                  <ApproveClaimForm action={approveClaimAction.bind(null, c.id)} claimed={claimed} />
+                  <ApproveClaimForm action={approveClaimAction.bind(null, c.id)} claimed={claimed} suggestions={suggestions} />
                   <form action={rejectClaimAction.bind(null, c.id)} className="flex flex-col gap-3">
                     <Input name="note" placeholder={t("note")} />
                     <Button variant="danger" className="self-start">

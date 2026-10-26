@@ -115,7 +115,9 @@
     "currentCity": "Current city",
     "status_UNCLAIMED": "Not yet registered",
     "status_CLAIMED": "Registered member",
-    "status_MERGED": "Merged"
+    "status_MERGED": "Merged",
+    "createAnyway": "None of these – add as a new person",
+    "checkAgain": "Check again"
   },
   "tree": {
     "title": "Family tree of {name}",
@@ -264,7 +266,11 @@
     "gotraName": "Gothiram name",
     "sankethanamam": "Sankethanamam",
     "edit": "Edit",
-    "tabTrees": "Family trees"
+    "tabTrees": "Family trees",
+    "existingRecords": "{count, plural, one {This member may already be in the tree} other {This member may be one of these # records}}",
+    "existingRecordsHint": "Added earlier by a relative or an admin. Link the member to their record instead of creating a second one.",
+    "alreadyRegistered": "Already registered by another member",
+    "useThisRecord": "Use this record"
   },
   "errors": {
     "required": "Please fill in the required fields",
@@ -329,6 +335,11 @@
     "unclaimedHint": "Added by a relative or an admin. When that person registers, their in-charge links them to this record instead of creating a new one.",
     "recent": "Recently started trees",
     "noneYet": "No trees started here yet.",
-    "rulesNote": "Every person keeps a permanent member code (AVC-…). Each new record is checked for duplicates and written to the audit log."
+    "rulesNote": "Every person keeps a permanent member code (AVC-…). Each new record is checked for duplicates and written to the audit log.",
+    "reason_sameParents": "Same parents",
+    "reason_sameChild": "Same child",
+    "reason_sameSpouse": "Same spouse",
+    "alreadyLinkedHere": "Already linked here",
+    "linkInstead": "Link this person instead"
   }
 }

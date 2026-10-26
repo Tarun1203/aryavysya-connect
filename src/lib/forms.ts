@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Duplicate } from "@/lib/dedup";
 
 /** Trimmed string field, or null when empty. */
 export function str(fd: FormData, key: string): string | null {
@@ -18,7 +19,7 @@ export const partialDate = z
 
 export const gender = z.enum(["MALE", "FEMALE", "OTHER"]);
 
-export type FormState = { error?: string; ok?: boolean } | undefined;
+export type FormState = { error?: string; ok?: boolean; duplicates?: Duplicate[] } | undefined;
 
 /** Fields shared by the create-person and edit-person forms. */
 export function personFields(fd: FormData) {

@@ -2,13 +2,13 @@
 
 import { startTransition, useActionState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import { createTreeAction } from "@/app/actions/tree";
 import type { GotraOption } from "@/lib/reference";
 import { NAKSHATRAS, RASIS } from "@/lib/constants";
 import { Button, Card, Field, Input, Notice, Select } from "./ui";
 import { GotraSelect } from "./GotraSelect";
 import { LocationPicker } from "./LocationPicker";
+import { DuplicateList } from "./DuplicateList";
 
 /** Start a new family tree: the founder's required details, then a duplicate check before anything is created. */
 export function CreateTreeForm({ gotras }: { gotras: GotraOption[] }) {
@@ -83,36 +83,14 @@ export function CreateTreeForm({ gotras }: { gotras: GotraOption[] }) {
       </Card>
 
       {state?.duplicates && (
-        <Card className="flex flex-col gap-3 border-warn">
-          <h3 className="font-semibold">{t("trees.possibleDuplicates", { count: state.duplicates.length })}</h3>
-          <p className="text-sm text-muted">{t("trees.duplicatesHint")}</p>
-          <ul className="flex flex-col gap-2">
-            {state.duplicates.map((d) => (
-              <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line px-3 py-2">
-                <div>
-                  <Link href={`/person/${d.id}`} target="_blank" className="font-medium hover:text-brand">
-                    {d.name}
-                  </Link>{" "}
-                  <span className="text-xs text-muted">{d.code}</span>
-                  <div className="text-xs text-muted">{d.detail}</div>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {d.reasons.map((r) => (
-                      <span key={r} className="rounded-full bg-brand-soft px-2 py-0.5 text-xs">
-                        {t(`trees.reason_${r}`)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <Link href={`/person/${d.id}`} className="text-sm text-brand hover:underline">
-                  {t("trees.openExisting")}
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <Button name="confirm" value="yes" variant="danger" disabled={pending} className="self-start">
-            {t("trees.createAnyway")}
-          </Button>
-        </Card>
+        <DuplicateList
+          duplicates={state.duplicates}
+          confirm={
+            <Button name="confirm" value="yes" variant="danger" disabled={pending} className="self-start">
+              {t("trees.createAnyway")}
+            </Button>
+          }
+        />
       )}
 
       {/* After editing the details the admin can check again */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import type { FormState } from "@/lib/forms";
 import type { GotraOption, Option } from "@/lib/reference";
@@ -8,6 +8,7 @@ import { NAKSHATRAS, RASIS, DEFAULT_KULADEVATA } from "@/lib/constants";
 import { Button, Card, Field, Input, Notice, Select, Textarea } from "./ui";
 import { LocationPicker, type PickedLocation } from "./LocationPicker";
 import { GotraSelect } from "./GotraSelect";
+import { DuplicateList } from "./DuplicateList";
 
 export type PersonDefaults = Partial<{
   givenName: string;
@@ -40,17 +41,27 @@ type Props = {
   places?: { native: PickedLocation; birth: PickedLocation };
   coParents?: Option[];
   submitLabel?: string;
+  /** When adding a relative: link a found duplicate instead of creating a new record */
+  linkAction?: (state: FormState, fd: FormData) => Promise<FormState>;
 };
 
-export function PersonForm({ action, defaults = {}, gotras, places = { native: {}, birth: {} }, coParents, submitLabel }: Props) {
+export function PersonForm({ action, defaults = {}, gotras, places = { native: {}, birth: {} }, coParents, submitLabel, linkAction }: Props) {
   const t = useTranslations("person");
   const tl = useTranslations("locations");
   const [state, formAction, pending] = useActionState(action, undefined);
   const [living, setLiving] = useState(defaults.isLiving ?? true);
   const d = (k: keyof PersonDefaults) => (defaults[k] as string | null | undefined) ?? "";
 
+  // Dispatch by hand rather than via the form's action prop, so what was typed survives
+  // when the server answers with possible duplicates instead of saving
+  const submit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
+    startTransition(() => formAction(fd));
+  };
+
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form onSubmit={submit} className="flex flex-col gap-4">
       {state?.error && <Notice tone="bad">{state.error}</Notice>}
       <Card className="grid gap-4 sm:grid-cols-2">
         <Field label={`${t("givenName")} *`}>
@@ -155,8 +166,19 @@ export function PersonForm({ action, defaults = {}, gotras, places = { native: {
         </Field>
         <LocationPicker prefix="birth" defaults={places.birth} />
       </Card>
-      <Button disabled={pending} className="self-start">
-        {submitLabel ?? t("save")}
+      {state?.duplicates && (
+        <DuplicateList
+          duplicates={state.duplicates}
+          linkAction={linkAction}
+          confirm={
+            <Button name="confirm" value="yes" variant="danger" disabled={pending} className="self-start">
+              {t("createAnyway")}
+            </Button>
+          }
+        />
+      )}
+      <Button variant={state?.duplicates ? "ghost" : "primary"} disabled={pending} className="self-start">
+        {state?.duplicates ? t("checkAgain") : (submitLabel ?? t("save"))}
       </Button>
     </form>
   );
