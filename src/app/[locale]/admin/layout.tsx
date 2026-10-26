@@ -27,12 +27,14 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
     ...(scope && scope.kind !== "local"
       ? [
           { href: "/admin/organizations", label: t("tabOrgs") },
+          { href: "/admin/incharges", label: t("tabIncharges") },
           { href: "/admin/users", label: t("tabUsers") },
         ]
       : []),
     ...(scope?.kind === "all"
       ? [
-          { href: "/admin/settings", label: t("tabSettings") },
+          { href: "/admin/gotras", label: t("tabGotras") },
+          { href: "/admin/districts", label: t("tabDistricts") },
           { href: "/admin/locations", label: tl("tab") },
         ]
       : []),

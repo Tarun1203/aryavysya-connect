@@ -132,7 +132,7 @@ export async function assignInchargeAction(districtId: string, _: FormState, fd:
   await db.district.update({ where: { id: districtId }, data: { inchargeId: target.id } });
   await db.user.update({ where: { id: target.id }, data: { role: "DISTRICT_INCHARGE", districtId } });
   await audit(u, "assign-incharge", "District", districtId, { userId: target.id });
-  return done("/admin/organizations");
+  return done("/admin/incharges");
 }
 
 export async function assignOrgAdminAction(orgId: string, _: FormState, fd: FormData): Promise<FormState> {
@@ -259,7 +259,7 @@ export async function addGotrasAction(_: FormState, fd: FormData): Promise<FormS
   const names = (str(fd, "gotras") ?? "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
   for (const name of names) await db.gotra.upsert({ where: { name }, update: {}, create: { name } });
   await audit(u, "add-gotras", "Gotra", "-", { names });
-  return done("/admin/settings");
+  return done("/admin/gotras");
 }
 
 export async function updateGotraAction(gotraId: string, fd: FormData) {
@@ -270,7 +270,7 @@ export async function updateGotraAction(gotraId: string, fd: FormData) {
     data: { nameTe: str(fd, "nameTe"), nameKn: str(fd, "nameKn"), nameTa: str(fd, "nameTa") },
   });
   await audit(u, "update", "Gotra", gotraId);
-  done("/admin/settings");
+  done("/admin/gotras");
 }
 
 export async function addDistrictAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -282,5 +282,5 @@ export async function addDistrictAction(_: FormState, fd: FormData): Promise<For
   if (!name || !state) return { error: t("errors.required") };
   const d = await db.district.upsert({ where: { state_name: { state, name } }, update: {}, create: { state, name } });
   await audit(u, "create", "District", d.id);
-  return done("/admin/settings");
+  return done("/admin/districts");
 }
