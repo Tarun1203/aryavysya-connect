@@ -8,6 +8,12 @@ async function seedReferenceData() {
   for (const name of GOTRAS) {
     await db.gotra.upsert({ where: { name }, update: {}, create: { name } });
   }
+  // Once the official LGD directory is loaded it owns the districts (and may have renamed or merged
+  // the starter ones), so re-adding the starter list on every start would create duplicates.
+  if (await db.district.count({ where: { lgdCode: { not: null } } })) {
+    console.log(`Seeded ${GOTRAS.length} gotras (districts come from the LGD directory)`);
+    return;
+  }
   for (const [state, names] of Object.entries(DISTRICTS)) {
     for (const name of names) {
       await db.district.upsert({ where: { state_name: { state, name } }, update: {}, create: { state, name } });
