@@ -15,31 +15,31 @@ async function mergeGotra(fromId: string, toId: string) {
   ]);
 }
 
+/**
+ * The gotras are maintained by the super admins in the database (Administration → Gotras).
+ * prisma/data/gotras.ts only fills an empty database, or one still holding the old list, once;
+ * after that the seed never adds, renames or overwrites a gotra, so deletions and edits stay.
+ */
 async function seedGotras() {
+  if (await db.gotra.count({ where: { no: { not: null } } })) return "kept (maintained in the database)";
   for (const [from, to] of Object.entries(RENAMED_GOTRAS)) {
     const [old, target] = await Promise.all([db.gotra.findUnique({ where: { name: from } }), db.gotra.findUnique({ where: { name: to } })]);
     if (old && target) await mergeGotra(old.id, target.id);
     else if (old) await db.gotra.update({ where: { name: from }, data: { name: to } });
   }
-  // The master list is applied in full once (numbers, scripts, kula names); after that the rows
-  // belong to the super admins' edits and only missing gotras are added.
-  const first = GOTRAS[0];
-  const mastered = (await db.gotra.findUnique({ where: { name: first.name } }))?.no === first.no;
-  if (!mastered) await db.gotra.updateMany({ data: { no: null } }); // free the numbers before renumbering
-  const existing = new Set((await db.gotra.findMany({ select: { name: true } })).map((g) => g.name));
   for (const g of GOTRAS) {
     const data = { no: g.no, nameTe: g.nameTe, nameKn: g.nameKn, nameTa: g.nameTa, kulas: g.kulas, kulaNames: g.kulaNames, localVerified: false };
-    if (!mastered) await db.gotra.upsert({ where: { name: g.name }, update: data, create: { name: g.name, ...data } });
-    else if (!existing.has(g.name)) await db.gotra.create({ data: { name: g.name, ...data } });
+    await db.gotra.upsert({ where: { name: g.name }, update: data, create: { name: g.name, ...data } });
   }
+  return `${GOTRAS.length} loaded from the starter list`;
 }
 
 async function seedReferenceData() {
-  await seedGotras();
+  const gotras = await seedGotras();
   // Once the official LGD directory is loaded it owns the districts (and may have renamed or merged
   // the starter ones), so re-adding the starter list on every start would create duplicates.
   if (await db.district.count({ where: { lgdCode: { not: null } } })) {
-    console.log(`Seeded ${GOTRAS.length} gotras (districts come from the LGD directory)`);
+    console.log(`Gotras: ${gotras} (districts come from the LGD directory)`);
     return;
   }
   for (const [state, names] of Object.entries(DISTRICTS)) {
@@ -47,7 +47,7 @@ async function seedReferenceData() {
       await db.district.upsert({ where: { state_name: { state, name } }, update: {}, create: { state, name } });
     }
   }
-  console.log(`Seeded ${GOTRAS.length} gotras and ${Object.values(DISTRICTS).flat().length} districts`);
+  console.log(`Gotras: ${gotras}; seeded ${Object.values(DISTRICTS).flat().length} districts`);
 }
 
 async function seedSuperAdmin() {

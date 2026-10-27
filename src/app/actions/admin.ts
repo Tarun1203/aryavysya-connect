@@ -296,21 +296,96 @@ export async function addGotrasAction(_: FormState, fd: FormData): Promise<FormS
   return done("/admin/gotras");
 }
 
-export async function updateGotraAction(gotraId: string, fd: FormData) {
-  const { u, scope } = await admin();
-  if (scope.kind !== "all") return;
-  await db.gotra.update({
-    where: { id: gotraId },
+/** The fields of the add and edit forms: number, name, the three scripts and the kula lines. */
+async function gotraFields(fd: FormData, selfId?: string): Promise<{ error: string } | { data: Record<string, unknown> }> {
+  const t = await getTranslations("admin");
+  const name = str(fd, "name")?.replace(/\s+/g, " ");
+  if (!name) return { error: t("gotraNameRequired") };
+  const noText = str(fd, "no");
+  const no = noText ? Number(noText) : null;
+  if (no !== null && !(Number.isInteger(no) && no > 0)) return { error: t("gotraNoInvalid") };
+  const clash = await db.gotra.findFirst({
+    where: { id: selfId ? { not: selfId } : undefined, OR: [{ name: { equals: name, mode: "insensitive" } }, ...(no ? [{ no }] : [])] },
+  });
+  if (clash) return { error: t(clash.no === no && no ? "gotraNoTaken" : "gotraExists", { name: clash.name, no: no ?? "" }) };
+  return {
     data: {
+      name,
+      no,
       nameTe: str(fd, "nameTe"),
       nameKn: str(fd, "nameKn"),
       nameTa: str(fd, "nameTa"),
       ...kulaFields(str(fd, "kulas") ?? ""),
       localVerified: fd.get("localVerified") === "on",
     },
+  };
+}
+
+export async function createGotraAction(_: FormState, fd: FormData): Promise<FormState> {
+  const t = await getTranslations("admin");
+  const { u, scope } = await admin();
+  if (scope.kind !== "all") return { error: t("forbidden") };
+  const f = await gotraFields(fd);
+  if ("error" in f) return f;
+  const g = await db.gotra.create({ data: f.data as { name: string } });
+  await audit(u, "create", "Gotra", g.id, { name: g.name, no: g.no });
+  return done("/admin/gotras");
+}
+
+export async function updateGotraAction(gotraId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const t = await getTranslations("admin");
+  const { u, scope } = await admin();
+  if (scope.kind !== "all") return { error: t("forbidden") };
+  const f = await gotraFields(fd, gotraId);
+  if ("error" in f) return f;
+  const before = await db.gotra.findUnique({ where: { id: gotraId } });
+  if (!before) return { error: t("notFound") };
+  await db.gotra.update({ where: { id: gotraId }, data: f.data });
+  await audit(u, "update", "Gotra", gotraId, before.name !== f.data.name ? { renamedFrom: before.name } : undefined);
+  return done("/admin/gotras");
+}
+
+/**
+ * Remove a gotra. If people or requests use it, they must be moved to another gotra first
+ * (for a duplicate spelling, merge it into the right one).
+ */
+export async function removeGotraAction(gotraId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const t = await getTranslations("admin");
+  const { u, scope } = await admin();
+  if (scope.kind !== "all") return { error: t("forbidden") };
+  if (fd.get("confirm") !== "on") return { error: t("removeConfirm") };
+  const into = str(fd, "into");
+  const g = await db.gotra.findUnique({
+    where: { id: gotraId },
+    include: { _count: { select: { persons: true, birthPersons: true, maternalPersons: true, claims: true } } },
   });
-  await audit(u, "update", "Gotra", gotraId);
-  done("/admin/gotras");
+  if (!g) return { error: t("notFound") };
+  const used = Object.values(g._count).reduce((a, b) => a + b, 0);
+  if (!into) {
+    if (used) return { error: t("gotraInUse", { count: used }) };
+    await db.gotra.delete({ where: { id: gotraId } });
+    await audit(u, "delete", "Gotra", gotraId, { name: g.name });
+    return done("/admin/gotras");
+  }
+  const target = await db.gotra.findUnique({ where: { id: into } });
+  if (!target || target.id === g.id) return { error: t("notFound") };
+  await db.$transaction([
+    db.person.updateMany({ where: { gotraId }, data: { gotraId: target.id } }),
+    db.person.updateMany({ where: { birthGotraId: gotraId }, data: { birthGotraId: target.id } }),
+    db.person.updateMany({ where: { maternalGotraId: gotraId }, data: { maternalGotraId: target.id } }),
+    db.familyClaim.updateMany({ where: { gotraId }, data: { gotraId: target.id } }),
+    // Keep the old spelling's kula names on the gotra it was merged into
+    db.gotra.update({
+      where: { id: target.id },
+      data: {
+        kulas: [...new Set([...target.kulas, ...g.kulas])],
+        kulaNames: { ...((g.kulaNames ?? {}) as object), ...((target.kulaNames ?? {}) as object) },
+      },
+    }),
+    db.gotra.delete({ where: { id: gotraId } }),
+  ]);
+  await audit(u, "merge", "Gotra", target.id, { from: g.name, moved: used });
+  return done("/admin/gotras");
 }
 
 export async function addDistrictAction(_: FormState, fd: FormData): Promise<FormState> {

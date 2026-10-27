@@ -163,7 +163,7 @@ For local development, `npm run dev:localdb` runs the app against the local test
 
 ### Data to review before launch
 
-- `prisma/data/gotras.ts`: the 102 gotras, transcribed from vaasavi.net. Spellings vary between sources.
+- Gotras: maintained in the database from **Administration → Gotras** (add, edit, merge duplicates, delete). `prisma/data/gotras.ts` is only the starter list for an empty database; the seed never changes gotras after that.
 - `prisma/data/districts.ts`: Andhra Pradesh and Telangana only. Add the other states from the admin page.
 - `messages/te.json`, `messages/kn.json` and `messages/ta.json` need a review by native speakers.
 

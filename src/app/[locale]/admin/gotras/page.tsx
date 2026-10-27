@@ -3,9 +3,9 @@ import { redirect } from "@/i18n/navigation";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/guard";
 import { adminScope } from "@/lib/permissions";
-import { addGotrasAction, updateGotraAction } from "@/app/actions/admin";
+import { addGotrasAction, createGotraAction, removeGotraAction, updateGotraAction } from "@/app/actions/admin";
 import { ActionForm } from "@/components/ActionForm";
-import { Button, Card, Field, Input, Textarea } from "@/components/ui";
+import { Button, Card, Field, Input, Select, Textarea } from "@/components/ui";
 import { kulaLabels } from "@/lib/reference";
 
 type KulaScripts = Record<string, { te?: string; kn?: string; ta?: string }>;
@@ -15,9 +15,44 @@ const kulaLines = (g: { kulas: string[]; kulaNames: unknown }) => {
   return g.kulas.map((k) => [k, local[k]?.te, local[k]?.kn, local[k]?.ta].filter(Boolean).join(" | ")).join("\n");
 };
 
+type GotraRow = { no: number | null; name: string; nameTe: string | null; nameKn: string | null; nameTa: string | null; kulas: string[]; kulaNames: unknown; localVerified: boolean };
+const cell = "min-w-0 rounded border border-line bg-background px-2 py-1";
+
+/** The add and edit forms share these fields: number, name, the three scripts and the kula lines. */
+function gotraInputs(t: (key: string) => string, g?: GotraRow) {
+  return (
+    <>
+      <div className="grid grid-cols-[5rem_1fr] gap-2">
+        <label className="flex flex-col gap-1 text-xs">
+          {t("gotraNo")}
+          <input name="no" type="number" min={1} defaultValue={g?.no ?? ""} className={cell} />
+        </label>
+        <label className="flex flex-col gap-1 text-xs">
+          {t("gotraName")}
+          <input name="name" required defaultValue={g?.name ?? ""} className={cell} />
+        </label>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <input name="nameTe" defaultValue={g?.nameTe ?? ""} placeholder="తెలుగు" className={cell} />
+        <input name="nameKn" defaultValue={g?.nameKn ?? ""} placeholder="ಕನ್ನಡ" className={cell} />
+        <input name="nameTa" defaultValue={g?.nameTa ?? ""} placeholder="தமிழ்" className={cell} />
+      </div>
+      <label className="flex flex-col gap-1 text-xs">
+        {t("sankethanamam")}
+        <textarea name="kulas" rows={g ? Math.min(8, Math.max(3, g.kulas.length)) : 3} defaultValue={g ? kulaLines(g) : ""} className={`${cell} font-mono text-xs`} />
+        <span className="text-muted">{t("kulaLinesHint")}</span>
+      </label>
+      <label className="flex items-center gap-2 text-xs">
+        <input type="checkbox" name="localVerified" defaultChecked={g?.localVerified ?? false} className="accent-brand" />
+        {t("scriptsVerified")}
+      </label>
+    </>
+  );
+}
+
 const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
-/** The 102 gotras laid out like the community's printed list: No · Gothiram name · Sankethanamam. */
+/** The gotras, kept in the database by the super admins, laid out like the community's printed list: No · Gothiram name · Sankethanamam. */
 export default async function GotrasPage({ params, searchParams }: PageProps<"/[locale]/admin/gotras">) {
   const { locale } = await params;
   const { q } = (await searchParams) as { q?: string };
@@ -38,16 +73,22 @@ export default async function GotrasPage({ params, searchParams }: PageProps<"/[
     ? all.filter((g) => [g.name, g.nameTe, g.nameKn, g.nameTa, ...g.kulas, ...scripts(g)].some((s) => s && norm(s).includes(key)))
     : all;
   const unverified = all.filter((g) => !g.localVerified).length;
-  const cell = "min-w-0 rounded border border-line bg-background px-2 py-1";
 
   return (
     <div className="flex flex-col gap-6">
       <details className="rounded-xl border border-line bg-surface p-5 shadow-sm [&[open]>summary]:mb-4">
-        <summary className="cursor-pointer select-none font-semibold text-brand">+ {t("addGotras")}</summary>
-        <p className="mb-3 text-xs text-muted">{t("addGotrasHint")}</p>
-        <ActionForm action={addGotrasAction} submit={t("add")}>
-          <Textarea name="gotras" rows={4} placeholder="Agasthyasa: Anubha Gula, Anubala" />
+        <summary className="cursor-pointer select-none font-semibold text-brand">+ {t("addGotra")}</summary>
+        <p className="mb-3 text-xs text-muted">{t("addGotraHint")}</p>
+        <ActionForm action={createGotraAction} submit={t("add")} resetOnSave className="flex max-w-xl flex-col gap-3">
+          {gotraInputs(t)}
         </ActionForm>
+        <details className="mt-4 text-sm">
+          <summary className="cursor-pointer text-xs text-brand">{t("addGotras")}</summary>
+          <p className="my-2 text-xs text-muted">{t("addGotrasHint")}</p>
+          <ActionForm action={addGotrasAction} submit={t("add")} resetOnSave>
+            <Textarea name="gotras" rows={4} placeholder="Agasthyasa: Anubha Gula, Anubala" />
+          </ActionForm>
+        </details>
       </details>
 
       <Card className="p-0">
@@ -87,29 +128,35 @@ export default async function GotrasPage({ params, searchParams }: PageProps<"/[
                     )}
                     <div className="text-xs text-muted">{t("gotraPeople", { count: g._count.persons })}</div>
                     {!g.localVerified && <div className="mt-1 inline-block rounded-full bg-brand-soft px-2 py-0.5 text-xs">{t("scriptsUnverified")}</div>}
-                    {g.no === null && <div className="mt-1 text-xs text-bad">{t("notInMasterList")}</div>}
                   </td>
                   <td className="p-2">{kulaLabels(g, locale).join(", ") || "–"}</td>
                   <td className="p-2 text-right">
                     <details className="group">
                       <summary className="cursor-pointer list-none text-xs text-brand hover:underline">{t("edit")}</summary>
-                      <form action={updateGotraAction.bind(null, g.id)} className="mt-2 flex w-72 flex-col gap-2 text-left sm:w-96">
-                        <label className="flex flex-col gap-1 text-xs">
-                          {t("sankethanamam")}
-                          <textarea name="kulas" rows={Math.min(8, Math.max(3, g.kulas.length))} defaultValue={kulaLines(g)} className={`${cell} font-mono text-xs`} />
-                          <span className="text-muted">{t("kulaLinesHint")}</span>
-                        </label>
-                        <div className="grid grid-cols-3 gap-2">
-                          <input name="nameTe" defaultValue={g.nameTe ?? ""} placeholder="తెలుగు" className={cell} />
-                          <input name="nameKn" defaultValue={g.nameKn ?? ""} placeholder="ಕನ್ನಡ" className={cell} />
-                          <input name="nameTa" defaultValue={g.nameTa ?? ""} placeholder="தமிழ்" className={cell} />
-                        </div>
-                        <label className="flex items-center gap-2 text-xs">
-                          <input type="checkbox" name="localVerified" defaultChecked={g.localVerified} className="accent-brand" />
-                          {t("scriptsVerified")}
-                        </label>
-                        <button className="self-end rounded border border-line px-3 py-1 text-xs hover:bg-brand-soft">{t("saveNames")}</button>
-                      </form>
+                      <div className="mt-2 flex w-72 flex-col gap-4 text-left sm:w-96">
+                        <ActionForm action={updateGotraAction.bind(null, g.id)} submit={t("saveNames")} className="flex flex-col gap-2">
+                          {gotraInputs(t, g)}
+                        </ActionForm>
+                        <ActionForm action={removeGotraAction.bind(null, g.id)} submit={t("removeGotra")} variant="danger" className="flex flex-col gap-2 border-t border-line pt-3">
+                          <label className="flex flex-col gap-1 text-xs">
+                            {t("mergeInto")}
+                            <Select name="into" defaultValue="">
+                              <option value="">{t("mergeNone")}</option>
+                              {all.filter((o) => o.id !== g.id).map((o) => (
+                                <option key={o.id} value={o.id}>
+                                  {o.no ? `${o.no}. ` : ""}
+                                  {o.name}
+                                </option>
+                              ))}
+                            </Select>
+                            <span className="text-muted">{t("mergeHint")}</span>
+                          </label>
+                          <label className="flex items-center gap-2 text-xs">
+                            <input type="checkbox" name="confirm" required className="accent-brand" />
+                            {t("removeConfirm")}
+                          </label>
+                        </ActionForm>
+                      </div>
                     </details>
                   </td>
                 </tr>
