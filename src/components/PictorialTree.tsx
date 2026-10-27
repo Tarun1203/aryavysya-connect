@@ -1,5 +1,7 @@
 import type { DescendantNode, TreeNode } from "@/lib/tree";
 
+const photoUrl = (id: string, at: Date) => `/api/photo/${id}?v=${at.getTime()}`;
+
 /**
  * The family drawn as a tree: the eldest known ancestor at the trunk, each generation one level
  * higher on curving branches that thin out as they climb, every person a medallion among leaves
@@ -75,9 +77,28 @@ function Medallion({ p, cx, cy, r, focus, href }: { p: TreeNode; cx: number; cy:
         strokeDasharray={p.isLiving ? undefined : "4 3"}
         opacity={p.isLiving ? 1 : 0.8}
       />
-      <text x={cx} y={cy + r * 0.18} textAnchor="middle" fontSize={r * 0.62} fontWeight={700} fill="#fff" style={{ pointerEvents: "none" }}>
-        {initials(p)}
-      </text>
+      {/* Only photos the family chose to show appear in the tree; hidden ones stay initials for everyone */}
+      {p.photo?.visible ? (
+        <>
+          <clipPath id={`clip-${p.id}`}>
+            <circle cx={cx} cy={cy} r={r - 2.5} />
+          </clipPath>
+          <image
+            href={photoUrl(p.id, p.photo.updatedAt)}
+            x={cx - r + 2.5}
+            y={cy - r + 2.5}
+            width={(r - 2.5) * 2}
+            height={(r - 2.5) * 2}
+            clipPath={`url(#clip-${p.id})`}
+            preserveAspectRatio="xMidYMid slice"
+            opacity={p.isLiving ? 1 : 0.85}
+          />
+        </>
+      ) : (
+        <text x={cx} y={cy + r * 0.18} textAnchor="middle" fontSize={r * 0.62} fontWeight={700} fill="#fff" style={{ pointerEvents: "none" }}>
+          {initials(p)}
+        </text>
+      )}
     </a>
   );
 }

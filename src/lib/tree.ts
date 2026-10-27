@@ -8,6 +8,7 @@ export async function getFamily(personId: string) {
       ...personInclude,
       birthGotra: true,
       maternalGotra: true,
+      photo: { select: { visible: true, updatedAt: true } },
       district: true,
       user: true,
       nativeLocality: { include: { taluk: true, district: true } },
@@ -60,9 +61,20 @@ export type TreeNode = {
   birthDate: string | null;
   deathDate: string | null;
   isLiving: boolean;
+  /** Only whether there is a shown photo and when it changed – never the image itself */
+  photo?: { visible: boolean; updatedAt: Date } | null;
 };
 
-const nodeSelect = { id: true, givenName: true, surname: true, gender: true, birthDate: true, deathDate: true, isLiving: true } as const;
+const nodeSelect = {
+  id: true,
+  givenName: true,
+  surname: true,
+  gender: true,
+  birthDate: true,
+  deathDate: true,
+  isLiving: true,
+  photo: { select: { visible: true, updatedAt: true } },
+} as const;
 
 /**
  * Ancestor chart: rows[g] holds 2^g slots (father first, then mother).

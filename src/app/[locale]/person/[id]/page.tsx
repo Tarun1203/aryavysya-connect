@@ -9,6 +9,9 @@ import { fullName, gotraLabel, kulaLabels, lifeSpan, memberCode } from "@/lib/re
 import { removeLinkAction } from "@/app/actions/person";
 import { respondMarriageAction, updateMarriageAction } from "@/app/actions/marriage";
 import { Card, Notice } from "@/components/ui";
+import { PhotoUpload } from "@/components/PhotoUpload";
+import { defaultVisible, photoRights, photoUrl } from "@/lib/photo";
+import { removePhotoAction, setPhotoVisibleAction, uploadPhotoAction } from "@/app/actions/photo";
 
 type P = { id: string; givenName: string; surname: string; birthDate: string | null; deathDate: string | null; isLiving: boolean; gotra: { name: string; nameTe: string | null; nameKn: string | null; nameTa: string | null } | null };
 
@@ -26,12 +29,16 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
   const tm = await getTranslations("marriage");
   const marriedWoman = person.gender === "FEMALE" && spouses.some((s) => s.person.gender === "MALE");
 
-  const [editable, canParent, canChild, canSpouse] = await Promise.all([
+  const [editable, canParent, canChild, canSpouse, photo] = await Promise.all([
     canEditPerson(user, id),
     canAddRelative(user, id, "parent"),
     canAddRelative(user, id, "child", spouses[0]?.person.id),
     canAddRelative(user, id, "spouse"),
+    photoRights(user, id),
   ]);
+  const tp = await getTranslations("photo");
+  const showPhoto = !!person.photo && (person.photo.visible || photo.seeHidden);
+  const consentLabel = tp(photo.reason === "guardian" ? "consentGuardian" : photo.reason === "self" ? "consentSelf" : "consentFamily");
   const history = isAdmin(user)
     ? await db.auditLog.findMany({ where: { entityId: id }, include: { user: true }, orderBy: { createdAt: "desc" }, take: 20 })
     : [];
@@ -75,6 +82,11 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+        {showPhoto && (
+          // eslint-disable-next-line @next/next/no-img-element -- served from our own access-checked route
+          <img src={photoUrl(person.id, person.photo!.updatedAt)} alt={fullName(person)} className={`size-20 rounded-full object-cover ring-2 ${person.photo!.visible ? "ring-brand" : "ring-line opacity-80"}`} />
+        )}
         <div>
           <h1 className="text-3xl font-bold text-brand">
             {fullName(person)}
@@ -91,6 +103,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
               {t("aliases")}: {person.aliases.join(", ")}
             </p>
           )}
+        </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/tree/${id}`} className="rounded-lg border border-line bg-surface px-4 py-2 text-sm font-semibold hover:bg-brand-soft">
@@ -150,6 +163,36 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
               ))}
           </dl>
           {person.notes && <p className="mt-4 whitespace-pre-wrap border-t border-line pt-4 text-sm">{person.notes}</p>}
+          {(photo.manage || (photo.remove && person.photo) || (editable && !photo.manage)) && (
+            <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4">
+              <h3 className="text-sm font-semibold">{tp("title")}</h3>
+              {person.photo && (
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="text-muted">{person.photo.visible ? tp("shown") : tp(photo.minor ? "hiddenMinor" : "hidden")}</span>
+                  {photo.manage && (
+                    <form action={setPhotoVisibleAction.bind(null, id, !person.photo.visible)}>
+                      <button className="rounded border border-line px-2 py-0.5 hover:bg-brand-soft">{person.photo.visible ? tp("hide") : tp("show")}</button>
+                    </form>
+                  )}
+                  {photo.remove && (
+                    <form action={removePhotoAction.bind(null, id)}>
+                      <button className="rounded px-2 py-0.5 text-muted hover:text-bad">{tp("remove")}</button>
+                    </form>
+                  )}
+                </div>
+              )}
+              {photo.manage ? (
+                <PhotoUpload
+                  action={uploadPhotoAction.bind(null, id)}
+                  defaultVisible={person.photo?.visible ?? defaultVisible(person)}
+                  hasPhoto={!!person.photo}
+                  consentLabel={consentLabel}
+                />
+              ) : (
+                <p className="text-xs text-muted">{tp(photo.minor ? "guardianOnly" : photo.reason === "self" ? "selfOnly" : "notAllowed")}</p>
+              )}
+            </div>
+          )}
         </Card>
 
         <Card className="grid gap-6 lg:col-span-2 sm:grid-cols-2">

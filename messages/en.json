@@ -413,5 +413,28 @@
     "addRegion": "Set rules for a state",
     "add": "Add",
     "note": "Confirm these with the state Mahasabhas before relying on them."
+  },
+  "photo": {
+    "title": "Photo",
+    "shown": "Shown to members in the tree.",
+    "hidden": "Hidden – only those who manage this photo can see it.",
+    "hiddenMinor": "Hidden – only the guardian can see it.",
+    "show": "Show in tree",
+    "hide": "Hide",
+    "remove": "Remove photo",
+    "upload": "Upload photo",
+    "replace": "Replace photo",
+    "showInTree": "Show this photo to members in the family tree",
+    "consentSelf": "This is my photo and I agree to it being kept here.",
+    "consentGuardian": "I am this child's parent or guardian and agree to the photo being kept here.",
+    "consentFamily": "I have this person's consent (or their family's, if they have passed away) to keep this photo here.",
+    "guardianOnly": "For a child under 18, only a parent or guardian can add or change the photo.",
+    "selfOnly": "This member manages their own photo.",
+    "notAllowed": "Only this person's family can add a photo.",
+    "consentRequired": "Please confirm consent first.",
+    "choosePhoto": "Choose a photo first.",
+    "tooLarge": "That photo is too large.",
+    "notImage": "That file isn't a photo we can use (JPEG, PNG or WebP).",
+    "saved": "Photo saved."
   }
 }

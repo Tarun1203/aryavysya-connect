@@ -339,6 +339,7 @@ model Person {
   couples1 Couple[]      @relation("Partner1")
   couples2 Couple[]      @relation("Partner2")
   user     User?         @relation("UserSelf")
+  photo    PersonPhoto?
   claims   FamilyClaim[]
 
   @@index([surname, givenName])
@@ -415,4 +416,19 @@ model MarriageRule {
   keepGotraAfterMarriageEnds Boolean   @default(true)
   updatedById                String?
   updatedAt                  DateTime  @updatedAt
+}
+
+/// A person's photo, kept small (resized to 320px in the browser) and in the database so it
+/// survives redeploys. Hidden photos are shown only to the people who manage them (see lib/photo.ts).
+model PersonPhoto {
+  personId     String   @id
+  person       Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  data         Bytes
+  mime         String
+  /// Shown to members in the tree and on the person page. Off by default for women.
+  visible      Boolean  @default(false)
+  uploadedById String?
+  /// When the uploader confirmed they have the person's (or, for a minor, the guardian's) consent
+  consentAt    DateTime
+  updatedAt    DateTime @updatedAt
 }
