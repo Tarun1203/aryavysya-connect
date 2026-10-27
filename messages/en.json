@@ -131,7 +131,14 @@
     "descendants": "Descendants",
     "generation": "Generation {n}",
     "unknown": "Unknown",
-    "focus": "Show tree from here"
+    "focus": "Show tree from here",
+    "viewPicture": "Tree picture",
+    "viewChart": "Chart",
+    "pictureHint": "From the eldest known ancestor at the trunk, each generation one branch higher. Tap a person to open them.",
+    "thisPerson": "▼ This person",
+    "legend": "Red: men · Turmeric: women · Dashed edge: passed away · Small circle beside a person: their spouse · Gold line on the branches: this person's lineage",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out"
   },
   "search": {
     "title": "Search the tree",

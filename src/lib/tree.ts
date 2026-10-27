@@ -106,3 +106,19 @@ export async function descendants(personId: string, depth = 3): Promise<Descenda
   children.sort((a, b) => (a.birthDate ?? "9999").localeCompare(b.birthDate ?? "9999"));
   return { ...p, spouses: couples.map((c) => (c.person1Id === personId ? c.person2 : c.person1)), children };
 }
+
+/**
+ * The trunk of a pictorial tree: walk up from a person through the father (or the mother when no
+ * father is recorded) to the eldest known ancestor, at most `maxUp` generations. Returns the
+ * ancestor and the path of ids from them down to the person.
+ */
+export async function lineageRoot(personId: string, maxUp = 5): Promise<{ rootId: string; path: string[] }> {
+  const path = [personId];
+  for (let g = 0; g < maxUp; g++) {
+    const parents = await db.parentChild.findMany({ where: { childId: path[0] }, include: { parent: { select: { id: true, gender: true } } } });
+    const next = parents.find((l) => l.parent.gender === "MALE") ?? parents[0];
+    if (!next || path.includes(next.parentId)) break;
+    path.unshift(next.parentId);
+  }
+  return { rootId: path[0], path };
+}
