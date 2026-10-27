@@ -3,6 +3,18 @@ import { db } from "@/lib/db";
 
 const personInclude = { gotra: true } as const;
 
+/**
+ * Brothers and sisters in order: the child no. when one was entered, then birth date, then name.
+ * The position in this order is the "child no." shown in the trees and on person pages.
+ */
+export function siblingOrder<T extends { birthOrder?: number | null; birthDate: string | null; givenName: string }>(a: T, b: T) {
+  return (
+    (a.birthOrder ?? 99) - (b.birthOrder ?? 99) ||
+    (a.birthDate ?? "9999").localeCompare(b.birthDate ?? "9999") ||
+    a.givenName.localeCompare(b.givenName)
+  );
+}
+
 export async function getFamily(personId: string) {
   const person = await db.person.findUnique({ where: { id: personId }, include: {
       ...personInclude,
@@ -38,7 +50,10 @@ export async function getFamily(personId: string) {
       })
     : [];
 
-  const byBirth = <T extends { birthDate: string | null }>(a: T, b: T) => (a.birthDate ?? "9999").localeCompare(b.birthDate ?? "9999");
+  const siblings = siblingLinks.map((l) => l.child).sort(siblingOrder);
+  // This person's own place among their parents' children
+  const all = [...siblings, person].sort(siblingOrder);
+  const childNo = parentIds.length ? { n: all.findIndex((p) => p.id === personId) + 1, of: all.length } : null;
 
   return {
     person,
@@ -48,8 +63,9 @@ export async function getFamily(personId: string) {
     proposals: couples
       .filter((c) => c.status === "PROPOSED")
       .map((c) => ({ linkId: c.id, incoming: c.person2Id === personId, proposedBy: c.proposedBy?.name ?? null, person: other(c) })),
-    children: childLinks.map((l) => ({ linkId: l.id, person: l.child })).sort((a, b) => byBirth(a.person, b.person)),
-    siblings: siblingLinks.map((l) => l.child).sort(byBirth),
+    children: childLinks.map((l) => ({ linkId: l.id, person: l.child })).sort((a, b) => siblingOrder(a.person, b.person)),
+    siblings,
+    childNo,
   };
 }
 
@@ -59,6 +75,7 @@ export type TreeNode = {
   surname: string;
   gender: string;
   birthDate: string | null;
+  birthOrder?: number | null;
   deathDate: string | null;
   isLiving: boolean;
   /** Only whether there is a shown photo and when it changed – never the image itself */
@@ -76,6 +93,7 @@ const nodeSelect = {
   surname: true,
   gender: true,
   birthDate: true,
+  birthOrder: true,
   deathDate: true,
   isLiving: true,
   status: true,
@@ -121,11 +139,13 @@ export async function descendants(personId: string, depth = 3): Promise<Descenda
     db.couple.findMany({
       where: { status: { not: "PROPOSED" }, OR: [{ person1Id: personId }, { person2Id: personId }] },
       include: { person1: { select: nodeSelect }, person2: { select: nodeSelect } },
+      // Spouse 1, 2, … in the order of the marriages
+      orderBy: [{ marriageDate: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
     }),
     depth > 0 ? db.parentChild.findMany({ where: { parentId: personId }, select: { childId: true } }) : [],
   ]);
   const children = (await Promise.all(kids.map((k) => descendants(k.childId, depth - 1)))).filter((c): c is DescendantNode => !!c);
-  children.sort((a, b) => (a.birthDate ?? "9999").localeCompare(b.birthDate ?? "9999"));
+  children.sort(siblingOrder);
   return { ...p, spouses: couples.map((c) => (c.person1Id === personId ? c.person2 : c.person1)), children };
 }
 

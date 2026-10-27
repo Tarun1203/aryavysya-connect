@@ -44,6 +44,7 @@ export function personFields(fd: FormData) {
       maternalGotraId: z.string().nullable(),
       isLiving: z.boolean(),
       birthDate: partialDate,
+      birthOrder: z.number().int().min(1).max(40).nullable(),
       birthPlace: z.string().nullable(),
       deathDate: partialDate,
       deathTithi: z.string().nullable(),
@@ -70,6 +71,8 @@ export function personFields(fd: FormData) {
       maternalGotraId: str(fd, "maternalGotraId"),
       isLiving: fd.get("isLiving") === "on",
       birthDate: str(fd, "birthDate"),
+      // Child no. among siblings; empty means "order by birth date"
+      birthOrder: str(fd, "birthOrder") ? Number(str(fd, "birthOrder")) : null,
       // Typed text wins; otherwise use the place picked in the location directory
       birthPlace: str(fd, "birthPlace") ?? str(fd, "birthText"),
       deathDate: str(fd, "deathDate"),

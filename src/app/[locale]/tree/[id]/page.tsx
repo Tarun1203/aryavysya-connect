@@ -60,10 +60,11 @@ export default async function TreePage({
 
     if (current === "list") {
       // Everyone in the lineage, generation by generation, in birth order
-      const rows: { gen: number; node: DescendantNode }[] = [];
-      const walk = (n: DescendantNode, gen: number) => {
-        rows.push({ gen, node: n });
-        n.children.forEach((c) => walk(c, gen + 1));
+      // `no`: child no. among brothers and sisters, when there is more than one
+      const rows: { gen: number; node: DescendantNode; no?: number }[] = [];
+      const walk = (n: DescendantNode, gen: number, no?: number) => {
+        rows.push({ gen, node: n, no });
+        n.children.forEach((c, i) => walk(c, gen + 1, n.children.length > 1 ? i + 1 : undefined));
       };
       walk(root, 1);
       const gens = [...new Set(rows.map((r) => r.gen))].sort((a, b) => a - b);
@@ -71,8 +72,9 @@ export default async function TreePage({
       const people =
         rows.length + rows.reduce((n, r) => n + r.node.spouses.length, 0);
       // The columns after the member code; a spouse's row shows ⚭ in place of the code
-      const cells = (p: TreeNode, focus: boolean) => [
+      const cells = (p: TreeNode, focus: boolean, tag?: string) => [
         <td key="name" className="p-2">
+          {tag && <span className="mr-2 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand">{tag}</span>}
           <Link
             href={`/person/${p.id}`}
             className={`hover:text-brand ${focus ? "font-bold text-brand" : "font-medium"}`}
@@ -138,16 +140,16 @@ export default async function TreePage({
                         <td className="p-2 pl-4 font-mono text-xs text-muted">
                           {r.node.memberNo ? memberCode(r.node.memberNo) : ""}
                         </td>
-                        {cells(r.node, r.node.id === id)}
+                        {cells(r.node, r.node.id === id, r.no ? tp("childNo", { n: r.no }) : undefined)}
                       </tr>,
                       // Spouses sit right under the person they married into the family with
-                      ...r.node.spouses.map((sp) => (
+                      ...r.node.spouses.map((sp, i) => (
                         <tr
                           key={`${r.node.id}-${sp.id}`}
                           className="border-b border-line text-muted"
                         >
                           <td className="p-2 pl-4 text-right text-xs">⚭</td>
-                          {cells(sp, sp.id === id)}
+                          {cells(sp, sp.id === id, r.node.spouses.length > 1 ? tp("spouseNo", { n: i + 1 }) : undefined)}
                         </tr>
                       )),
                     ])}
@@ -202,6 +204,8 @@ export default async function TreePage({
               generation: (n) => t("generation", { n }),
               you: t("focusBadge"),
               eldest: t("eldest"),
+              childNo: (n) => tp("childNo", { n }),
+              spouseNo: (n) => tp("spouseNo", { n }),
             }}
           />
         </TreeViewport>

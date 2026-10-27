@@ -22,6 +22,7 @@ export type PersonDefaults = Partial<{
   maternalGotraId: string | null;
   isLiving: boolean;
   birthDate: string | null;
+  birthOrder: number | null;
   birthPlace: string | null;
   deathDate: string | null;
   deathTithi: string | null;
@@ -115,6 +116,9 @@ export function PersonForm({ action, defaults = {}, gotras, places = { native: {
         </label>
         <Field label={t("birthDate")} hint={t("dateHint")}>
           <Input name="birthDate" defaultValue={d("birthDate")} pattern="\d{4}(-\d{2}(-\d{2})?)?" />
+        </Field>
+        <Field label={t("birthOrder")} hint={t("birthOrderHint")}>
+          <Input name="birthOrder" type="number" min={1} max={40} defaultValue={defaults?.birthOrder ?? ""} />
         </Field>
         {!living && (
           <>

@@ -157,7 +157,12 @@
     "state_REGISTERED": "Registered member",
     "state_FAMILY": "Kept by family",
     "state_PASSED": "Passed away",
-    "state_MERGED": "Merged"
+    "state_MERGED": "Merged",
+    "birthOrder": "Child no.",
+    "birthOrderHint": "Order among brothers and sisters (1 = eldest). Leave empty to order by birth date.",
+    "childNo": "Child {n}",
+    "spouseNo": "Spouse {n}",
+    "childNoOf": "{n} of {of} children"
   },
   "tree": {
     "title": "Family tree of {name}",

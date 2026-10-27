@@ -308,6 +308,9 @@ model Person {
   isLiving         Boolean   @default(true)
   /// Free-form dates: "1952", "1952-03" or "1952-03-14"
   birthDate        String?
+  /// Child no. among brothers and sisters (1 = eldest), for when birth dates are unknown or wrong.
+  /// Siblings are ordered by this, then by birth date – see siblingOrder in src/lib/tree.ts.
+  birthOrder       Int?
   /// Display text; birthLocality links it to the location directory when picked from there
   birthPlace       String?
   birthLocalityId  String?

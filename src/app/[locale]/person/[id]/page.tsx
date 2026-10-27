@@ -26,7 +26,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
   if (family.person.status === "MERGED" && family.person.mergedIntoId) redirect({ href: `/person/${family.person.mergedIntoId}`, locale });
   const t = await getTranslations("person");
   const format = await getFormatter();
-  const { person, parents, spouses, children, siblings, proposals } = family;
+  const { person, parents, spouses, children, siblings, proposals, childNo } = family;
   const tm = await getTranslations("marriage");
   const marriedWoman = person.gender === "FEMALE" && spouses.some((s) => s.person.gender === "MALE");
 
@@ -50,6 +50,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
     marriedWoman ? [t("birthGotraMaiden"), gotraLabel(person.birthGotra, locale)] : [t("maternalGotra"), gotraLabel(person.maternalGotra, locale)],
     [t("kulas"), person.gotra && kulaLabels(person.gotra, locale).join(", ")],
     [t("birthDate"), person.birthDate],
+    [t("birthOrder"), childNo && childNo.of > 1 ? t("childNoOf", { n: childNo.n, of: childNo.of }) : null],
     [t("birthPlace"), placeLine(person.birthPlace, person.birthLocality)],
     [t("deathDate"), person.isLiving ? null : person.deathDate],
     [t("deathTithi"), person.isLiving ? null : person.deathTithi],
@@ -62,9 +63,10 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
     [t("currentCity"), person.currentCity],
   ];
 
-  const PersonLink = ({ p, linkId, kind }: { p: P; linkId?: string; kind?: "parentChild" | "couple" }) => (
+  const PersonLink = ({ p, linkId, kind, no }: { p: P; linkId?: string; kind?: "parentChild" | "couple"; no?: string }) => (
     <li className="flex items-center justify-between gap-2 rounded-xl border border-line px-3 py-2">
-      <Link href={`/person/${p.id}`} className="hover:text-brand">
+      <Link href={`/person/${p.id}`} className="flex items-baseline gap-2 hover:text-brand">
+        {no && <span className="shrink-0 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand">{no}</span>}
         <span className="font-medium">{fullName(p)}</span>
         <span className="ml-2 text-xs text-muted">
           {[lifeSpan(p), gotraLabel(p.gotra, locale)].filter(Boolean).join(" · ")}
@@ -220,7 +222,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
             {spouses.map((s) => (
               <li key={s.linkId} className="flex flex-col gap-1">
                 <ul>
-                  <PersonLink p={s.person} linkId={s.linkId} kind="couple" />
+                  <PersonLink p={s.person} linkId={s.linkId} kind="couple" no={spouses.length > 1 ? t("spouseNo", { n: spouses.indexOf(s) + 1 }) : undefined} />
                 </ul>
                 <div className="flex flex-wrap items-center gap-2 px-1 text-xs text-muted">
                   {s.status !== "CONFIRMED" && <span className="rounded-full bg-brand-soft px-2 py-0.5 text-foreground">{tm(`status_${s.status}`)}</span>}
@@ -248,8 +250,8 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
             ))}
           </Section>
           <Section title={t("children")} none={t("none")}>
-            {children.map((c) => (
-              <PersonLink key={c.linkId} p={c.person} linkId={c.linkId} kind="parentChild" />
+            {children.map((c, i) => (
+              <PersonLink key={c.linkId} p={c.person} linkId={c.linkId} kind="parentChild" no={t("childNo", { n: i + 1 })} />
             ))}
           </Section>
           <Section title={t("siblings")} none={t("none")}>

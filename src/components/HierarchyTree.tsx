@@ -4,7 +4,7 @@ import { fullName, gotraLabel, lifeSpan } from "@/lib/reference";
 
 const photoUrl = (id: string, at: Date) => `/api/photo/${id}?v=${at.getTime()}`;
 
-type Labels = { you: string; generation: (n: number) => string; eldest: string };
+type Labels = { you: string; generation: (n: number) => string; eldest: string; childNo: (n: number) => string; spouseNo: (n: number) => string };
 
 /**
  * The family as a top-down hierarchy: the eldest known ancestor at the top, each generation one
@@ -54,7 +54,8 @@ export function HierarchyTree({
     </a>
   );
 
-  const branch = (n: DescendantNode, gen: number) => {
+  // `no` is the child no. among the parents' children (siblings are already in order)
+  const branch = (n: DescendantNode, gen: number, no?: number) => {
     const focus = n.id === focusId;
     const lit = onPath.has(n.id);
     return (
@@ -66,21 +67,22 @@ export function HierarchyTree({
           }`}
         >
           <span className="absolute -top-2.5 left-3 rounded-full border border-line bg-background px-2 text-[10px] font-semibold uppercase tracking-wide text-muted">
-            {focus ? labels.you : gen === 0 ? labels.eldest : labels.generation(gen)}
+            {[focus ? labels.you : gen === 0 ? labels.eldest : labels.generation(gen), no && labels.childNo(no)].filter(Boolean).join(" · ")}
           </span>
           <div className="flex flex-col gap-0.5 pt-1.5 sm:flex-row sm:items-center">
             {person(n, focus)}
-            {n.spouses.map((s) => (
+            {n.spouses.map((s, i) => (
               <div key={s.id} className="flex items-center gap-1 border-t border-dashed border-line pt-0.5 sm:border-l sm:border-t-0 sm:pl-1 sm:pt-0">
-                <span aria-hidden className="px-1 text-accent">
-                  ⚭
+                <span className="flex flex-col items-center px-1 leading-none text-accent" title={n.spouses.length > 1 ? labels.spouseNo(i + 1) : undefined}>
+                  <span aria-hidden>⚭</span>
+                  {n.spouses.length > 1 && <span className="mt-0.5 text-[10px] font-bold">{i + 1}</span>}
                 </span>
                 {person(s, s.id === focusId)}
               </div>
             ))}
           </div>
         </div>
-        {n.children.length > 0 && <ul data-path={n.children.some((c) => onPath.has(c.id)) || undefined}>{n.children.map((c) => branch(c, gen + 1))}</ul>}
+        {n.children.length > 0 && <ul data-path={n.children.some((c) => onPath.has(c.id)) || undefined}>{n.children.map((c, i) => branch(c, gen + 1, n.children.length > 1 ? i + 1 : undefined))}</ul>}
       </li>
     );
   };
