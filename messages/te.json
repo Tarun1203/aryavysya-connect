@@ -187,7 +187,9 @@
     "fit": "సరిపెట్టు",
     "fullScreen": "పూర్తి తెర",
     "exitFullScreen": "పూర్తి తెర మూసివేయి",
-    "zoomReset": "100%కి తిరిగి"
+    "zoomReset": "100%కి తిరిగి",
+    "print": "ముద్రించు",
+    "printedFrom": "{site} నుండి {date}న ముద్రించబడింది"
   },
   "search": {
     "title": "వంశ వృక్షంలో వెతకండి",

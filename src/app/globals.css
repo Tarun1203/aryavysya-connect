@@ -225,3 +225,67 @@ h1, h2, .font-display {
 .htree li[data-path]:last-child:not(:only-child)::before {
   border-right-color: var(--lit);
 }
+
+/* ---------- Printing: only the page content, in light colours, tree pages in landscape ---------- */
+@page {
+  margin: 10mm;
+}
+@page tree {
+  size: A4 landscape;
+}
+@media print {
+  :root {
+    --background: #ffffff;
+    --foreground: #1a120c;
+    --surface: #ffffff;
+    --surface-2: #f7efe4;
+    --muted: #5f4b3c;
+    --line: #d9c4ab;
+    --brand: #a3341f;
+    --brand-deep: #5e1a0e;
+    --brand-soft: #fbe6d8;
+    --accent: #c27c00;
+    --gold: #b38f3a;
+    --glow: transparent;
+    --shadow: none;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    animation: none !important;
+    transition: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  body > header,
+  body header.fixed,
+  body > footer,
+  footer,
+  nextjs-portal {
+    display: none !important;
+  }
+  main {
+    max-width: none;
+    padding: 0 !important;
+  }
+  .tree-frame {
+    page: tree;
+    left: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: none !important;
+  }
+  .tree-box {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    background: none !important;
+  }
+  /* keep a person's card in one piece across pages */
+  .htree li > div,
+  tr {
+    break-inside: avoid;
+  }
+}

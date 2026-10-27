@@ -187,7 +187,9 @@
     "fit": "Fit",
     "fullScreen": "Full screen",
     "exitFullScreen": "Exit full screen",
-    "zoomReset": "Back to 100%"
+    "zoomReset": "Back to 100%",
+    "print": "Print",
+    "printedFrom": "Printed from {site} on {date}"
   },
   "search": {
     "title": "Search the tree",

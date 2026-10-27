@@ -17,11 +17,12 @@ import {
   memberCode,
   personState,
 } from "@/lib/reference";
-import { Card, PageTitle } from "@/components/ui";
+import { buttonClass, Card, PageTitle } from "@/components/ui";
 import { PictorialTree } from "@/components/PictorialTree";
 import { TreeViewport } from "@/components/TreeViewport";
 import { Segmented } from "@/components/Segmented";
 import { HierarchyTree } from "@/components/HierarchyTree";
+import { PrintButton } from "@/components/PrintButton";
 
 export default async function TreePage({
   params,
@@ -36,14 +37,17 @@ export default async function TreePage({
   const current = (VIEWS as readonly string[]).includes(view ?? "") ? (view as (typeof VIEWS)[number]) : "hierarchy";
   const viewLabel = { hierarchy: "viewHierarchy", picture: "viewPicture", list: "viewList", chart: "viewChart" } as const;
   const tabs = (
-    <Segmented
-      className="w-fit"
-      items={VIEWS.map((v) => ({
-        href: v === "hierarchy" ? `/tree/${id}` : `/tree/${id}?view=${v}`,
-        label: t(viewLabel[v]),
-        active: current === v,
-      }))}
-    />
+    <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+      <Segmented
+        className="w-fit"
+        items={VIEWS.map((v) => ({
+          href: v === "hierarchy" ? `/tree/${id}` : `/tree/${id}?view=${v}`,
+          label: t(viewLabel[v]),
+          active: current === v,
+        }))}
+      />
+      <PrintButton label={t("print")} className={buttonClass("ghost")} />
+    </div>
   );
 
   if (current !== "chart") {
