@@ -3,7 +3,7 @@ import { Link, redirect } from "@/i18n/navigation";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/guard";
 import { adminScope } from "@/lib/permissions";
-import { fullName, gotraOptions, memberCode } from "@/lib/reference";
+import { fullName, gotraOptions, memberCode, PERSON_STATES, stateWhere } from "@/lib/reference";
 import { CreateTreeForm } from "@/components/CreateTreeForm";
 import { Card } from "@/components/ui";
 
@@ -14,13 +14,13 @@ export default async function TreesPage({ params }: PageProps<"/[locale]/admin/t
   const user = await requireAdmin(locale);
   if ((await adminScope(user))?.kind !== "all") redirect({ href: "/admin", locale });
   const t = await getTranslations("trees");
+  const tp = await getTranslations("person");
 
   const [gotras, counts, started] = await Promise.all([
     gotraOptions(locale),
-    db.person.groupBy({ by: ["status"], _count: { _all: true } }),
+    Promise.all(PERSON_STATES.map((s) => db.person.count({ where: stateWhere[s] }))),
     db.auditLog.findMany({ where: { action: "create-tree" }, orderBy: { createdAt: "desc" }, take: 15, include: { user: true } }),
   ]);
-  const count = (s: string) => counts.find((c) => c.status === s)?._count._all ?? 0;
   const founders = await db.person.findMany({
     where: { id: { in: started.map((s) => s.entityId) } },
     include: { gotra: true, district: true },
@@ -39,13 +39,21 @@ export default async function TreesPage({ params }: PageProps<"/[locale]/admin/t
       <aside className="flex flex-col gap-4">
         <Card>
           <h2 className="mb-2 font-semibold">{t("people")}</h2>
-          <dl className="grid grid-cols-2 gap-y-1 text-sm">
-            <dt className="text-muted">{t("claimed")}</dt>
-            <dd className="text-right">{count("CLAIMED")}</dd>
-            <dt className="text-muted">{t("unclaimed")}</dt>
-            <dd className="text-right">{count("UNCLAIMED")}</dd>
-          </dl>
-          <p className="mt-2 text-xs text-muted">{t("unclaimedHint")}</p>
+          {/* Each count opens the list of those people */}
+          <ul className="flex flex-col gap-1 text-sm">
+            {PERSON_STATES.map((s, i) => (
+              <li key={s}>
+                <Link href={`/admin/trees/people?state=${s}`} className="flex justify-between rounded px-1 hover:bg-brand-soft">
+                  <span className="text-muted">{tp(`state_${s}`)}</span>
+                  <span className="font-medium text-brand">{counts[i]}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <Link href="/admin/trees/people" className="mt-2 inline-block text-sm text-brand hover:underline">
+            {t("seeEveryone")} →
+          </Link>
+          <p className="mt-2 text-xs text-muted">{t("statesHint")}</p>
         </Card>
         <Card>
           <h2 className="mb-2 font-semibold">{t("recent")}</h2>

@@ -3,13 +3,28 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { requireViewer } from "@/lib/guard";
 import { editableIds } from "@/lib/permissions";
-import { descendants, lineageRoot, pedigree, type DescendantNode, type TreeNode } from "@/lib/tree";
-import { fullName, lifeSpan } from "@/lib/reference";
+import {
+  descendants,
+  lineageRoot,
+  pedigree,
+  type DescendantNode,
+  type TreeNode,
+} from "@/lib/tree";
+import {
+  fullName,
+  gotraLabel,
+  lifeSpan,
+  memberCode,
+  personState,
+} from "@/lib/reference";
 import { Card, PageTitle } from "@/components/ui";
 import { PictorialTree } from "@/components/PictorialTree";
 import { TreeViewport } from "@/components/TreeViewport";
 
-export default async function TreePage({ params, searchParams }: PageProps<"/[locale]/tree/[id]">) {
+export default async function TreePage({
+  params,
+  searchParams,
+}: PageProps<"/[locale]/tree/[id]">) {
   const { locale, id } = await params;
   const { view } = (await searchParams) as { view?: string };
   setRequestLocale(locale);
@@ -17,13 +32,19 @@ export default async function TreePage({ params, searchParams }: PageProps<"/[lo
   const t = await getTranslations("tree");
   const tabs = (
     <div className="flex gap-1 self-start rounded-lg border border-line bg-surface p-1 text-sm">
-      {(["picture", "chart"] as const).map((v) => (
+      {(["picture", "list", "chart"] as const).map((v) => (
         <Link
           key={v}
-          href={v === "picture" ? `/tree/${id}` : `/tree/${id}?view=chart`}
-          className={`rounded-md px-3 py-1 ${(view === "chart") === (v === "chart") ? "bg-brand text-white" : "hover:bg-brand-soft"}`}
+          href={v === "picture" ? `/tree/${id}` : `/tree/${id}?view=${v}`}
+          className={`rounded-md px-3 py-1 ${view === v || (v === "picture" && view !== "list" && view !== "chart") ? "bg-brand text-white" : "hover:bg-brand-soft"}`}
         >
-          {t(v === "picture" ? "viewPicture" : "viewChart")}
+          {t(
+            v === "picture"
+              ? "viewPicture"
+              : v === "list"
+                ? "viewList"
+                : "viewChart",
+          )}
         </Link>
       ))}
     </div>
@@ -35,9 +56,114 @@ export default async function TreePage({ params, searchParams }: PageProps<"/[lo
     const root = await descendants(rootId, Math.min(10, path.length + 2));
     if (!root) notFound();
     const person = path.length > 1 ? (await pedigree(id, 1))[0][0] : root;
+    const tp = await getTranslations("person");
+
+    if (view === "list") {
+      // Everyone in the lineage, generation by generation, in birth order
+      const rows: { gen: number; node: DescendantNode }[] = [];
+      const walk = (n: DescendantNode, gen: number) => {
+        rows.push({ gen, node: n });
+        n.children.forEach((c) => walk(c, gen + 1));
+      };
+      walk(root, 1);
+      const gens = [...new Set(rows.map((r) => r.gen))].sort((a, b) => a - b);
+      const onPath = new Set(path);
+      const people =
+        rows.length + rows.reduce((n, r) => n + r.node.spouses.length, 0);
+      // The columns after the member code; a spouse's row shows ⚭ in place of the code
+      const cells = (p: TreeNode, focus: boolean) => [
+        <td key="name" className="p-2">
+          <Link
+            href={`/person/${p.id}`}
+            className={`hover:text-brand ${focus ? "font-bold text-brand" : "font-medium"}`}
+          >
+            {fullName(p)}
+          </Link>
+          {(p.givenNameLocal || p.surnameLocal) && (
+            <div className="text-xs text-muted">
+              {[p.givenNameLocal, p.surnameLocal].filter(Boolean).join(" ")}
+            </div>
+          )}
+        </td>,
+        <td key="life" className="p-2 whitespace-nowrap">
+          {lifeSpan(p)}
+        </td>,
+        <td key="gotra" className="p-2">
+          {gotraLabel(p.gotra, locale) ?? "–"}
+        </td>,
+        <td key="state" className="p-2">
+          {p.status && (
+            <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs">
+              {tp(
+                `state_${personState({ status: p.status, isLiving: p.isLiving })}`,
+              )}
+            </span>
+          )}
+        </td>,
+      ];
+      return (
+        <div className="flex flex-col gap-4">
+          <PageTitle sub={t("listHint", { people, generations: gens.length })}>
+            {t("title", { name: person ? fullName(person) : fullName(root) })}
+          </PageTitle>
+          {tabs}
+          <Card className="overflow-x-auto p-0">
+            <table className="w-full text-sm">
+              <thead className="border-b border-line bg-brand-soft text-left">
+                <tr>
+                  <th className="p-2 pl-4">{t("colCode")}</th>
+                  <th className="p-2">{t("colName")}</th>
+                  <th className="p-2">{t("colLife")}</th>
+                  <th className="p-2">{tp("ownGotra")}</th>
+                  <th className="p-2">{t("colState")}</th>
+                </tr>
+              </thead>
+              {gens.map((g) => (
+                <tbody key={g}>
+                  <tr>
+                    <th
+                      colSpan={5}
+                      className="border-b border-line bg-surface p-2 pl-4 text-left text-xs font-semibold uppercase tracking-wide text-muted"
+                    >
+                      {g === 1 ? t("eldest") : t("generation", { n: g - 1 })}
+                    </th>
+                  </tr>
+                  {rows
+                    .filter((r) => r.gen === g)
+                    .flatMap((r) => [
+                      <tr
+                        key={r.node.id}
+                        className={`border-b border-line ${onPath.has(r.node.id) ? "bg-brand-soft/40" : ""}`}
+                      >
+                        <td className="p-2 pl-4 font-mono text-xs text-muted">
+                          {r.node.memberNo ? memberCode(r.node.memberNo) : ""}
+                        </td>
+                        {cells(r.node, r.node.id === id)}
+                      </tr>,
+                      // Spouses sit right under the person they married into the family with
+                      ...r.node.spouses.map((sp) => (
+                        <tr
+                          key={`${r.node.id}-${sp.id}`}
+                          className="border-b border-line text-muted"
+                        >
+                          <td className="p-2 pl-4 text-right text-xs">⚭</td>
+                          {cells(sp, sp.id === id)}
+                        </tr>
+                      )),
+                    ])}
+                </tbody>
+              ))}
+            </table>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col gap-4">
-        <PageTitle sub={t("pictureHint")}>{t("title", { name: person ? fullName(person) : fullName(root) })}</PageTitle>
+        <PageTitle sub={t("pictureHint")}>
+          {t("title", { name: person ? fullName(person) : fullName(root) })}
+        </PageTitle>
         {tabs}
         <TreeViewport>
           <PictorialTree
@@ -45,7 +171,10 @@ export default async function TreePage({ params, searchParams }: PageProps<"/[lo
             path={path}
             focusId={id}
             href={(pid) => `/${locale}/person/${pid}`}
-            labels={{ generation: (n) => t("generation", { n }), you: t("thisPerson") }}
+            labels={{
+              generation: (n) => t("generation", { n }),
+              you: t("thisPerson"),
+            }}
           />
         </TreeViewport>
         <p className="text-xs text-muted">{t("legend")}</p>
@@ -53,7 +182,11 @@ export default async function TreePage({ params, searchParams }: PageProps<"/[lo
     );
   }
 
-  const [rows, desc, editable] = await Promise.all([pedigree(id, 6), descendants(id, 4), editableIds(user)]);
+  const [rows, desc, editable] = await Promise.all([
+    pedigree(id, 6),
+    descendants(id, 4),
+    editableIds(user),
+  ]);
   if (!rows[0][0] || !desc) notFound();
   const canEdit = (pid: string) => editable === null || editable.has(pid);
 
@@ -71,7 +204,9 @@ export default async function TreePage({ params, searchParams }: PageProps<"/[lo
         <div className="text-xs text-muted">{lifeSpan(p)}</div>
       </Link>
     ) : (
-      <div className="rounded-lg border border-dashed border-line px-3 py-2 text-sm text-muted">{t("unknown")}</div>
+      <div className="rounded-lg border border-dashed border-line px-3 py-2 text-sm text-muted">
+        {t("unknown")}
+      </div>
     );
 
   const Descendant = ({ node }: { node: DescendantNode }) => (

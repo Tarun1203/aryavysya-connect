@@ -40,6 +40,22 @@ export async function localOrgOptions() {
   return orgs.map((o) => ({ id: o.id, label: o.town ? `${o.name} (${o.town})` : o.name, districtId: o.districtId }));
 }
 
+/**
+ * What a record is to the community, in plain words: a registered member (has their own login),
+ * kept by family (living, no login – their family looks after the record), or passed away.
+ * Ancestors never need to register.
+ */
+export type PersonState = "REGISTERED" | "FAMILY" | "PASSED" | "MERGED";
+export const PERSON_STATES = ["REGISTERED", "FAMILY", "PASSED"] as const;
+export const personState = (p: { status: string; isLiving: boolean }): PersonState =>
+  p.status === "MERGED" ? "MERGED" : p.status === "CLAIMED" ? "REGISTERED" : p.isLiving ? "FAMILY" : "PASSED";
+/** Prisma filter for each state */
+export const stateWhere = {
+  REGISTERED: { status: "CLAIMED" as const },
+  FAMILY: { status: "UNCLAIMED" as const, isLiving: true },
+  PASSED: { status: "UNCLAIMED" as const, isLiving: false },
+};
+
 /** Human-facing member code – a label for display and support, never the identity. */
 export const memberCode = (memberNo: number) => `AVC-${String(memberNo).padStart(6, "0")}`;
 

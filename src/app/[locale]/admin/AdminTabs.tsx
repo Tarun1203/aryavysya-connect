@@ -7,7 +7,8 @@ export function AdminTabs({ tabs }: { tabs: { href: string; label: string }[] })
   return (
     <nav className="flex flex-wrap gap-1 border-b border-line">
       {tabs.map((tab) => {
-        const active = pathname === tab.href;
+        // Sub-pages (e.g. /admin/trees/people) keep their tab lit; /admin itself matches only exactly
+        const active = pathname === tab.href || (tab.href !== "/admin" && pathname.startsWith(`${tab.href}/`));
         return (
           <Link
             key={tab.href}

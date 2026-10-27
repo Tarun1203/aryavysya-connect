@@ -123,7 +123,11 @@
     "birthGotraHint": "The father's gotra. It doesn't change when a woman marries.",
     "birthGotraMaiden": "Birth / maiden gotra",
     "maternalGotra": "Mother's gotra",
-    "maternalGotraHint": "The mother's birth gotra. Filled in from the mother once she is in the tree."
+    "maternalGotraHint": "The mother's birth gotra. Filled in from the mother once she is in the tree.",
+    "state_REGISTERED": "Registered member",
+    "state_FAMILY": "Kept by family",
+    "state_PASSED": "Passed away",
+    "state_MERGED": "Merged"
   },
   "tree": {
     "title": "Family tree of {name}",
@@ -138,7 +142,14 @@
     "thisPerson": "▼ This person",
     "legend": "Red: men · Turmeric: women · Dashed edge: passed away · Small circle beside a person: their spouse · Gold line on the branches: this person's lineage",
     "zoomIn": "Zoom in",
-    "zoomOut": "Zoom out"
+    "zoomOut": "Zoom out",
+    "viewList": "List",
+    "listHint": "{people} people in {generations} generations, from the eldest known ancestor down",
+    "eldest": "Eldest known ancestor",
+    "colCode": "Code",
+    "colName": "Name",
+    "colLife": "Born – died",
+    "colState": "Status"
   },
   "search": {
     "title": "Search the tree",
@@ -350,9 +361,6 @@
     "checkAndCreate": "Check for duplicates and create",
     "checkAgain": "Check again",
     "people": "People in the trees",
-    "claimed": "Registered members",
-    "unclaimed": "Not yet registered",
-    "unclaimedHint": "Added by a relative or an admin. When that person registers, their in-charge links them to this record instead of creating a new one.",
     "recent": "Recently started trees",
     "noneYet": "No trees started here yet.",
     "rulesNote": "Every person keeps a permanent member code (AVC-…). Each new record is checked for duplicates and written to the audit log.",
@@ -360,7 +368,22 @@
     "reason_sameChild": "Same child",
     "reason_sameSpouse": "Same spouse",
     "alreadyLinkedHere": "Already linked here",
-    "linkInstead": "Link this person instead"
+    "linkInstead": "Link this person instead",
+    "backToTrees": "Family trees",
+    "everyone": "Everyone",
+    "searchPeople": "Name or member code",
+    "search": "Search",
+    "openTree": "Tree",
+    "noPeople": "Nobody here yet.",
+    "prev": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {pages} · {total} people",
+    "seeEveryone": "See everyone as a list",
+    "statesHint": "Ancestors and elders never need to register – their family keeps their record. Only living people who want their own login register.",
+    "colCode": "Code",
+    "colName": "Name",
+    "colLife": "Born – died",
+    "colState": "Status"
   },
   "marriage": {
     "alreadyProposed": "This marriage link is already waiting for the other family to accept.",

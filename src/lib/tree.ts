@@ -63,6 +63,11 @@ export type TreeNode = {
   isLiving: boolean;
   /** Only whether there is a shown photo and when it changed – never the image itself */
   photo?: { visible: boolean; updatedAt: Date } | null;
+  status?: string;
+  memberNo?: number;
+  givenNameLocal?: string | null;
+  surnameLocal?: string | null;
+  gotra?: { name: string; nameTe: string | null; nameKn: string | null; nameTa: string | null } | null;
 };
 
 const nodeSelect = {
@@ -73,6 +78,11 @@ const nodeSelect = {
   birthDate: true,
   deathDate: true,
   isLiving: true,
+  status: true,
+  memberNo: true,
+  givenNameLocal: true,
+  surnameLocal: true,
+  gotra: { select: { name: true, nameTe: true, nameKn: true, nameTa: true } },
   photo: { select: { visible: true, updatedAt: true } },
 } as const;
 

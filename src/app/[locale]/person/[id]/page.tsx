@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { requireViewer } from "@/lib/guard";
 import { canAddRelative, canEditPerson, isAdmin } from "@/lib/permissions";
 import { getFamily } from "@/lib/tree";
-import { fullName, gotraLabel, kulaLabels, lifeSpan, memberCode } from "@/lib/reference";
+import { fullName, gotraLabel, kulaLabels, lifeSpan, memberCode, personState } from "@/lib/reference";
 import { removeLinkAction } from "@/app/actions/person";
 import { respondMarriageAction, updateMarriageAction } from "@/app/actions/marriage";
 import { Card, Notice } from "@/components/ui";
@@ -96,7 +96,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
             <p className="text-xl">{[person.givenNameLocal, person.surnameLocal].filter(Boolean).join(" ")}</p>
           )}
           <p className="mt-1 text-muted">
-            {[lifeSpan(person), person.isLiving ? t("living") : t("deceased"), memberCode(person.memberNo), t(`status_${person.status}`)].filter(Boolean).join(" · ")}
+            {[lifeSpan(person), memberCode(person.memberNo), t(`state_${personState(person)}`)].filter(Boolean).join(" · ")}
           </p>
           {person.aliases.length > 0 && (
             <p className="text-sm text-muted">
