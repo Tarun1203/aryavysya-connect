@@ -5,13 +5,14 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
-import { audit, canAddRelative, canEditPerson, canView, type Relation } from "@/lib/permissions";
+import { audit, canAddRelative, canEditPerson, canView, isAdmin, type Relation } from "@/lib/permissions";
 import { familyScope } from "@/lib/family";
 import { personFields, str, type FormState } from "@/lib/forms";
 import { cleanPlaces } from "@/lib/locations/resolve";
 import { findDuplicates } from "@/lib/dedup";
 import { marriageCheck } from "@/lib/marriage";
 import { rulesFor, syncAround } from "@/lib/gotra";
+import { mergePeople, mergeProblem } from "@/lib/merge";
 
 export async function updatePersonAction(personId: string, _: FormState, fd: FormData): Promise<FormState> {
   const t = await getTranslations();
@@ -172,4 +173,24 @@ export async function removeLinkAction(kind: "parentChild" | "couple", linkId: s
   await audit(user, `unlink-${kind}`, "Person", link[0], { other: link[1] });
   revalidatePath("/", "layout");
   redirect({ href: `/person/${returnTo}`, locale: await getLocale() });
+}
+
+/**
+ * Merge a duplicate record into this one (administrators only, with edit rights over both).
+ * See src/lib/merge.ts for what moves; the duplicate keeps its id and member code and redirects here.
+ */
+export async function mergePersonAction(keepId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const t = await getTranslations("merge");
+  const user = await currentUser();
+  const dupId = str(fd, "duplicateId");
+  if (!dupId) return { error: t("chooseDuplicate") };
+  if (fd.get("confirm") !== "on") return { error: t("confirmRequired") };
+  if (!isAdmin(user) || !(await canEditPerson(user, keepId)) || !(await canEditPerson(user, dupId))) return { error: t("notAllowed") };
+  const problem = await mergeProblem(keepId, dupId);
+  if (problem) return { error: t(`problem_${problem}`) };
+  const moved = await mergePeople(keepId, dupId);
+  await audit(user, "merge", "Person", keepId, moved);
+  await audit(user, "merged-into", "Person", dupId, { into: keepId });
+  revalidatePath("/", "layout");
+  return { ok: true };
 }

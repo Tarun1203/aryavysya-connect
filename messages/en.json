@@ -531,5 +531,20 @@
     "iconCredit": "3D icons: 3dicons (CC0)",
     "maintained": "Maintained with the district in-charges, local sanghas & sabhas and state Mahasabhas",
     "blessing": "Om Sri Vasavi Kanyaka Parameswari Namaha"
+  },
+  "merge": {
+    "title": "Merge a duplicate record into this one",
+    "intro": "Use this when the same person was entered twice. This record ({code}) is kept. The duplicate's parents, children, marriages, photo, membership requests and login move here, its empty details fill gaps in this one, and its name is kept as an alias. Its old link and member code will open this record. This can't be undone from the site.",
+    "search": "Search for the duplicate by name",
+    "confirm": "I've checked that the duplicate is the same person as {name}.",
+    "submit": "Merge into this record",
+    "chooseDuplicate": "Choose the duplicate record.",
+    "confirmRequired": "Tick the box to confirm it is the same person.",
+    "notAllowed": "Only an administrator who can edit both records can merge them.",
+    "problem_same": "That's this record itself.",
+    "problem_missing": "One of the records no longer exists.",
+    "problem_alreadyMerged": "One of the records has already been merged.",
+    "problem_twoAccounts": "Both records have their own login, so they are two members. Ask them which record is right first.",
+    "problem_parentOfOther": "One is recorded as the other's parent, so they can't be the same person."
   }
 }

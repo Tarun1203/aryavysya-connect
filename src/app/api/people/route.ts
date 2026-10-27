@@ -12,6 +12,8 @@ export async function GET(req: NextRequest) {
   const words = q.split(/\s+/).slice(0, 3);
   const people = await db.person.findMany({
     where: {
+      // A merged record is shown through the one it was merged into
+      status: { not: "MERGED" },
       AND: words.map((w) => ({
         OR: [
           { givenName: { contains: w, mode: "insensitive" as const } },

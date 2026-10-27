@@ -6,7 +6,9 @@ import { requireViewer } from "@/lib/guard";
 import { canAddRelative, canEditPerson, isAdmin } from "@/lib/permissions";
 import { getFamily } from "@/lib/tree";
 import { fullName, gotraLabel, kulaLabels, lifeSpan, memberCode, personState } from "@/lib/reference";
-import { removeLinkAction } from "@/app/actions/person";
+import { mergePersonAction, removeLinkAction } from "@/app/actions/person";
+import { ActionForm } from "@/components/ActionForm";
+import { PersonPicker } from "@/components/PersonPicker";
 import { respondMarriageAction, updateMarriageAction } from "@/app/actions/marriage";
 import Image from "next/image";
 import { Badge, buttonClass, Card, Notice } from "@/components/ui";
@@ -28,6 +30,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
   const format = await getFormatter();
   const { person, parents, spouses, children, siblings, proposals, childNo } = family;
   const tm = await getTranslations("marriage");
+  const tmerge = await getTranslations("merge");
   const marriedWoman = person.gender === "FEMALE" && spouses.some((s) => s.person.gender === "MALE");
 
   const [editable, canParent, canChild, canSpouse, photo] = await Promise.all([
@@ -280,6 +283,22 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
           )}
         </Card>
       </div>
+
+      {isAdmin(user) && editable && (
+        <Card>
+          <details className="group">
+            <summary className="cursor-pointer font-semibold">{tmerge("title")}</summary>
+            <p className="mb-3 mt-2 text-sm text-muted">{tmerge("intro", { code: memberCode(person.memberNo) })}</p>
+            <ActionForm action={mergePersonAction.bind(null, id)} submit={tmerge("submit")} variant="danger" className="flex max-w-xl flex-col gap-3">
+              <PersonPicker name="duplicateId" placeholder={tmerge("search")} />
+              <label className="flex items-start gap-2 text-sm">
+                <input type="checkbox" name="confirm" required className="mt-0.5 accent-brand" />
+                <span>{tmerge("confirm", { name: fullName(person) })}</span>
+              </label>
+            </ActionForm>
+          </details>
+        </Card>
+      )}
 
       {history.length > 0 && (
         <Card>
