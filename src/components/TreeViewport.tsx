@@ -35,8 +35,9 @@ export function TreeViewport({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
-  // Printing: scale the tree to a landscape A4 page (about 1040 × 700 CSS px inside the margins).
-  // A tall tree keeps the page width and runs onto further pages rather than shrinking too far.
+  // Printing: scale the tree to a landscape A4 page (about 1040 × 715 CSS px inside the margins;
+  // the title and the legend take about 190 of that on the first sheet). A tall tree keeps the page width and
+  // runs onto further pages rather than shrinking too far.
   const zoomRef = useRef(zoom);
   useEffect(() => {
     zoomRef.current = zoom;
@@ -50,8 +51,8 @@ export function TreeViewport({ children }: { children: ReactNode }) {
       const r = c.getBoundingClientRect();
       const w = r.width / saved, h = r.height / saved;
       const byWidth = Math.min(1, 1040 / w);
-      const onePage = Math.min(byWidth, 700 / h);
-      flushSync(() => setZoom(onePage >= 0.45 ? onePage : byWidth));
+      const onePage = Math.min(byWidth, 520 / h);
+      flushSync(() => setZoom(onePage >= 0.3 ? onePage : byWidth));
     };
     const after = () => setZoom(saved);
     window.addEventListener("beforeprint", before);
@@ -81,7 +82,7 @@ export function TreeViewport({ children }: { children: ReactNode }) {
   const button = "grid h-8 min-w-8 place-items-center rounded-xl border border-line bg-surface/90 px-2 text-sm leading-none shadow-soft backdrop-blur hover:bg-brand-soft";
   return (
     // Breaks out of the centred page column to use the window's width
-    <div ref={frame} className={`tree-frame relative ${full ? "bg-background" : "left-1/2 w-[calc(100vw-2rem)] max-w-[1800px] -translate-x-1/2"}`}>
+    <div ref={frame} className={`tree-frame relative ${full ? "bg-background" : "left-1/2 w-[calc(100vw-2rem)] max-w-[1800px] -translate-x-1/2 print:left-0 print:w-auto print:max-w-none print:translate-x-0"}`}>
       <div className="absolute right-3 top-3 z-10 flex gap-1 print:hidden">
         <button type="button" className={button} onClick={() => setZoom((z) => Math.max(0.3, z - 0.15))} aria-label={t("zoomOut")}>
           −

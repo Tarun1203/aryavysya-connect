@@ -40,7 +40,7 @@ export function HierarchyTree({
           // eslint-disable-next-line @next/next/no-img-element -- served from our own access-checked route
           <img src={photoUrl(p.id, p.photo.updatedAt)} alt="" className="size-full object-cover" />
         ) : (
-          <Image src={`/icons/3d/${p.gender === "FEMALE" ? "girl" : "boy"}.png`} alt="" width={32} height={32} className="size-7" />
+          <Image src={`/icons/3d/${p.gender === "FEMALE" ? "girl" : "boy"}.png`} alt="" width={32} height={32} loading="eager" className="size-7" />
         )}
       </span>
       <span className="min-w-0 text-left">

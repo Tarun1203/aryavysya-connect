@@ -269,12 +269,22 @@ h1, h2, .font-display {
     max-width: none;
     padding: 0 !important;
   }
-  .tree-frame {
+  /* The whole tree page is landscape, so the title and the tree share the first sheet
+     (a named page set on the tree alone would force a page break before it) */
+  main:has(.tree-frame) {
     page: tree;
-    left: auto !important;
-    width: auto !important;
-    max-width: none !important;
-    transform: none !important;
+  }
+  main:has(.tree-frame) h1 {
+    font-size: 1.6rem;
+  }
+  /* the legend under the tree picture */
+  .tree-frame + p {
+    margin-top: 0;
+    font-size: 9px;
+  }
+  /* "tap anyone to open their page" means nothing on paper */
+  main:has(.tree-frame) h1 ~ p {
+    display: none;
   }
   .tree-box {
     height: auto !important;
