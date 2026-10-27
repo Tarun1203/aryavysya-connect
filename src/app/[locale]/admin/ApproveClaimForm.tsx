@@ -31,7 +31,7 @@ export function ApproveClaimForm({
     <ActionForm action={action} submit={t("admin.approve")}>
       <input type="hidden" name="mode" value={mode} />
       {suggestions.length > 0 && (
-        <div className="flex flex-col gap-2 rounded-lg border border-warn p-3">
+        <div className="flex flex-col gap-2 rounded-xl border border-warn p-3">
           <p className="text-sm font-semibold">{t("admin.existingRecords", { count: suggestions.length })}</p>
           <p className="text-xs text-muted">{t("admin.existingRecordsHint")}</p>
           <ul className="flex flex-col gap-2">

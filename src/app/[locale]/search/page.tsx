@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { db } from "@/lib/db";
@@ -70,7 +71,7 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
 
   return (
     <div className="flex flex-col gap-6">
-      <PageTitle>{t("title")}</PageTitle>
+      <PageTitle eyebrow={t("eyebrow")}>{t("title")}</PageTitle>
       <Card>
         <form className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label={t("query")}>
@@ -89,18 +90,30 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
         </form>
       </Card>
 
+      {!searched && (
+        <div className="flex flex-col items-center gap-3 py-10 text-center text-muted">
+          <Image src="/icons/3d/zoom.png" alt="" width={120} height={120} className="animate-float drop-shadow-xl" />
+          <p className="max-w-md">{t("start")}</p>
+        </div>
+      )}
+
       {searched && (
         <section>
           <p className="mb-3 text-sm text-muted">{t("results", { count: people.length })}</p>
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {people.map((p) => (
               <li key={p.id}>
-                <Link href={`/person/${p.id}`} className="block rounded-xl border border-line bg-surface p-4 hover:border-brand">
-                  <div className="font-semibold">{fullName(p)}</div>
-                  {(p.givenNameLocal || p.surnameLocal) && <div>{[p.givenNameLocal, p.surnameLocal].filter(Boolean).join(" ")}</div>}
-                  <div className="mt-1 text-xs text-muted">
-                    {[lifeSpan(p), gotraLabel(p.gotra, locale), p.nativeLocality?.name ?? p.nativePlace, p.district?.name, p.nativeLocality?.pincode].filter(Boolean).join(" · ")}
-                  </div>
+                <Link href={`/person/${p.id}`} className="group flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 shadow-soft transition hover:-translate-y-0.5 hover:border-brand/40">
+                  <span className={`grid size-12 shrink-0 place-items-center rounded-full border-2 bg-surface-2 ${p.gender === "FEMALE" ? "border-gold/70" : "border-brand/40"}`}>
+                    <Image src={`/icons/3d/${p.gender === "FEMALE" ? "girl" : "boy"}.png`} alt="" width={40} height={40} className="size-9 transition group-hover:scale-110" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-semibold group-hover:text-brand">{fullName(p)}</span>
+                    {(p.givenNameLocal || p.surnameLocal) && <span className="block text-sm">{[p.givenNameLocal, p.surnameLocal].filter(Boolean).join(" ")}</span>}
+                    <span className="mt-0.5 block text-xs text-muted">
+                      {[lifeSpan(p), gotraLabel(p.gotra, locale), p.nativeLocality?.name ?? p.nativePlace, p.district?.name, p.nativeLocality?.pincode].filter(Boolean).join(" · ")}
+                    </span>
+                  </span>
                 </Link>
               </li>
             ))}

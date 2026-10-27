@@ -20,6 +20,7 @@ import {
 import { Card, PageTitle } from "@/components/ui";
 import { PictorialTree } from "@/components/PictorialTree";
 import { TreeViewport } from "@/components/TreeViewport";
+import { Segmented } from "@/components/Segmented";
 
 export default async function TreePage({
   params,
@@ -30,24 +31,16 @@ export default async function TreePage({
   setRequestLocale(locale);
   const user = await requireViewer(locale);
   const t = await getTranslations("tree");
+  const current = view === "list" || view === "chart" ? view : "picture";
   const tabs = (
-    <div className="flex gap-1 self-start rounded-lg border border-line bg-surface p-1 text-sm">
-      {(["picture", "list", "chart"] as const).map((v) => (
-        <Link
-          key={v}
-          href={v === "picture" ? `/tree/${id}` : `/tree/${id}?view=${v}`}
-          className={`rounded-md px-3 py-1 ${view === v || (v === "picture" && view !== "list" && view !== "chart") ? "bg-brand text-white" : "hover:bg-brand-soft"}`}
-        >
-          {t(
-            v === "picture"
-              ? "viewPicture"
-              : v === "list"
-                ? "viewList"
-                : "viewChart",
-          )}
-        </Link>
-      ))}
-    </div>
+    <Segmented
+      className="w-fit"
+      items={(["picture", "list", "chart"] as const).map((v) => ({
+        href: v === "picture" ? `/tree/${id}` : `/tree/${id}?view=${v}`,
+        label: t(v === "picture" ? "viewPicture" : v === "list" ? "viewList" : "viewChart"),
+        active: current === v,
+      }))}
+    />
   );
 
   if (view !== "chart") {
@@ -103,7 +96,7 @@ export default async function TreePage({
       ];
       return (
         <div className="flex flex-col gap-4">
-          <PageTitle sub={t("listHint", { people, generations: gens.length })}>
+          <PageTitle eyebrow={t("eyebrow")} sub={t("listHint", { people, generations: gens.length })}>
             {t("title", { name: person ? fullName(person) : fullName(root) })}
           </PageTitle>
           {tabs}
@@ -161,7 +154,7 @@ export default async function TreePage({
 
     return (
       <div className="flex flex-col gap-4">
-        <PageTitle sub={t("pictureHint")}>
+        <PageTitle eyebrow={t("eyebrow")} sub={t("pictureHint")}>
           {t("title", { name: person ? fullName(person) : fullName(root) })}
         </PageTitle>
         {tabs}
@@ -196,7 +189,7 @@ export default async function TreePage({
     ) : p ? (
       <Link
         href={`/person/${p.id}`}
-        className={`block rounded-lg border border-l-4 px-3 py-2 text-sm shadow-sm transition hover:border-brand ${
+        className={`block rounded-xl border border-l-4 px-3 py-2 text-sm shadow-sm transition hover:border-brand ${
           p.gender === "FEMALE" ? "border-l-accent" : "border-l-brand"
         } ${canEdit(p.id) ? "border-line bg-surface" : "border-dashed border-line bg-background"}`}
       >
@@ -204,7 +197,7 @@ export default async function TreePage({
         <div className="text-xs text-muted">{lifeSpan(p)}</div>
       </Link>
     ) : (
-      <div className="rounded-lg border border-dashed border-line px-3 py-2 text-sm text-muted">
+      <div className="rounded-xl border border-dashed border-line px-3 py-2 text-sm text-muted">
         {t("unknown")}
       </div>
     );
@@ -238,7 +231,7 @@ export default async function TreePage({
 
   return (
     <div className="flex flex-col gap-8">
-      <PageTitle>{t("title", { name: fullName(rows[0][0]) })}</PageTitle>
+      <PageTitle eyebrow={t("eyebrow")}>{t("title", { name: fullName(rows[0][0]) })}</PageTitle>
       {tabs}
 
       <Card className="overflow-x-auto">

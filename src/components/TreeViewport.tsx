@@ -18,7 +18,7 @@ export function TreeViewport({ children }: { children: ReactNode }) {
     el.scrollTop += b.top - a.top - a.height / 2 + b.height / 2;
   }, []);
 
-  const button = "size-8 rounded-lg border border-line bg-surface text-lg leading-none hover:bg-brand-soft";
+  const button = "size-8 rounded-xl border border-line bg-surface text-lg leading-none hover:bg-brand-soft";
   return (
     <div className="relative">
       <div className="absolute right-3 top-3 z-10 flex gap-1">

@@ -119,7 +119,7 @@ export function LocationPicker({
   const districtName = districtList.find((d) => d.id === districtId)?.name;
   const talukName = talukList.find((x) => x.id === talukId)?.name;
   const text = [locality?.label.split(" · ")[0], talukName, districtName, state].filter(Boolean).join(", ") + (locality?.pincode ? ` – ${locality.pincode}` : "");
-  const select = "rounded-lg border border-line bg-background px-3 py-2 text-base outline-none focus:border-brand";
+  const select = "rounded-xl border border-line bg-background px-3 py-2 text-base outline-none focus:border-brand";
 
   return (
     <div className="flex flex-col gap-3">
@@ -144,7 +144,7 @@ export function LocationPicker({
         </label>
       )}
       {pinHits && (
-        <ul className="max-h-60 overflow-auto rounded-lg border border-line bg-surface text-sm">
+        <ul className="max-h-60 overflow-auto rounded-xl border border-line bg-surface text-sm">
           {pinHits.length === 0 && <li className="px-3 py-2 text-muted">{t("noMatches")}</li>}
           {pinHits.map((p) => (
             <li key={p.id}>
@@ -229,7 +229,7 @@ export function LocationPicker({
         <div className="relative flex flex-col gap-1 text-sm">
           <span className="font-medium">{t("locality")}</span>
           {locality ? (
-            <div className="flex items-center justify-between rounded-lg border border-brand bg-brand-soft px-3 py-2">
+            <div className="flex items-center justify-between rounded-xl border border-brand bg-brand-soft px-3 py-2">
               <span>{locality.label}</span>
               <button type="button" className="text-muted hover:text-brand" onClick={() => setLocality(null)} aria-label={t("clear")}>
                 ✕
@@ -239,7 +239,7 @@ export function LocationPicker({
             <>
               <input className={select} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("searchLocality")} />
               {hitList.length > 0 && (
-                <ul className="absolute top-full z-10 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-line bg-surface shadow-lg">
+                <ul className="absolute top-full z-10 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-line bg-surface shadow-lg">
                   {hitList.map((p) => (
                     <li key={p.id}>
                       <button type="button" onClick={() => choose(p)} className="w-full px-3 py-2 text-left hover:bg-brand-soft">

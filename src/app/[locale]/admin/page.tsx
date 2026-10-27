@@ -101,7 +101,7 @@ export default async function PendingClaimsPage({ params }: PageProps<"/[locale]
                     </div>
                   ))}
               </dl>
-              {c.note && <p className="rounded-lg bg-background p-3 text-sm">{c.note}</p>}
+              {c.note && <p className="rounded-xl bg-background p-3 text-sm">{c.note}</p>}
               {claimed && (
                 <p className="text-sm">
                   {t("claimed")}:{" "}

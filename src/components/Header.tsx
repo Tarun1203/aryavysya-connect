@@ -4,6 +4,8 @@ import { currentUser } from "@/lib/auth";
 import { canView, isAdmin } from "@/lib/permissions";
 import { logoutAction } from "@/app/actions/auth";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { Navbar } from "./Navbar";
+import { buttonClass } from "./ui";
 
 export async function Header() {
   const t = await getTranslations();
@@ -16,45 +18,42 @@ export async function Header() {
     { href: "/match", label: t("nav.match"), show: member },
     { href: user?.personId ? `/tree/${user.personId}` : "/account", label: t("nav.myTree"), show: !!user?.personId && member },
     { href: "/admin", label: t("nav.admin"), show: isAdmin(user) && user?.status === "APPROVED" },
-  ].filter((l) => l.show);
+  ]
+    .filter((l) => l.show)
+    .map(({ href, label }) => ({ href, label }));
 
-  return (
-    <header className="border-b border-line bg-surface">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2 font-bold text-brand">
-          <span aria-hidden className="grid size-9 place-items-center rounded-full bg-brand text-lg text-white">ॐ</span>
-          <span className="leading-tight">{t("app.name")}</span>
-        </Link>
-        <nav className="flex flex-1 flex-wrap items-center gap-4 text-sm">
-          {links.map((l) => (
-            <Link key={l.href} href={l.href} className="hover:text-brand">
-              {l.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="flex items-center gap-3 text-sm">
-          <LanguageSwitcher label={t("nav.language")} />
-          {user ? (
-            <>
-              <Link href="/account" className="hover:text-brand">
-                {user.name}
-              </Link>
-              <form action={logoutAction}>
-                <button className="text-muted hover:text-brand">{t("nav.logout")}</button>
-              </form>
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="hover:text-brand">
-                {t("nav.login")}
-              </Link>
-              <Link href="/register" className="rounded-lg bg-brand px-3 py-1.5 font-semibold text-white">
-                {t("nav.register")}
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
+  const initials = user?.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+
+  const actions = (
+    <>
+      <LanguageSwitcher label={t("nav.language")} />
+      {user ? (
+        <>
+          <Link href="/account" className="flex items-center gap-2 rounded-full border border-line bg-surface py-1 pl-1 pr-3 hover:border-brand/40">
+            <span className="grid size-7 place-items-center rounded-full bg-gradient-to-br from-brand to-accent text-xs font-bold text-white">{initials}</span>
+            <span className="max-w-32 truncate">{user.name}</span>
+          </Link>
+          <form action={logoutAction}>
+            <button className="rounded-full px-3 py-1.5 text-muted transition hover:bg-brand-soft hover:text-brand">{t("nav.logout")}</button>
+          </form>
+        </>
+      ) : (
+        <>
+          <Link href="/login" className="rounded-full px-3 py-1.5 transition hover:bg-brand-soft hover:text-brand">
+            {t("nav.login")}
+          </Link>
+          <Link href="/register" className={buttonClass("primary", "rounded-full px-4 py-1.5")}>
+            {t("nav.register")}
+          </Link>
+        </>
+      )}
+    </>
   );
+
+  return <Navbar brand={t("app.name")} links={links} actions={actions} menuLabel={t("nav.menu")} />;
 }

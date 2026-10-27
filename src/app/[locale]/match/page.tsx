@@ -25,7 +25,7 @@ export default async function MatchPage({ params, searchParams }: PageProps<"/[l
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <PageTitle sub={t("intro")}>{t("title")}</PageTitle>
+      <PageTitle eyebrow={t("eyebrow")} sub={t("intro")}>{t("title")}</PageTitle>
       <Card>
         <form className="grid gap-4 sm:grid-cols-2">
           <Field label={t("personA")}>

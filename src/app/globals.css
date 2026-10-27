@@ -1,32 +1,46 @@
 @import "tailwindcss";
 
+/*
+ * Kumkum red, turmeric and sandalwood on a warm cream page. The token names are used by every
+ * page, so the palette can change here without touching them.
+ */
 :root {
-  --background: #fffaf3;
-  --foreground: #2b1d14;
+  --background: #fbf6ee;
+  --foreground: #22150d;
   --surface: #ffffff;
-  --muted: #7a6455;
-  --line: #ead9c6;
+  --surface-2: #f6ede0;
+  --muted: #76604f;
+  --line: #ead9c4;
   --brand: #a3341f; /* kumkum */
-  --brand-soft: #fbe9dc;
+  --brand-deep: #5e1a0e;
+  --brand-soft: #fbe6d8;
   --accent: #d98e04; /* turmeric */
+  --gold: #c8a24a;
   --ok: #2f7d4f;
-  --warn: #b26a00;
+  --warn: #a86400;
   --bad: #b3261e;
+  --glow: rgb(217 142 4 / 0.35);
+  --shadow: 0 1px 2px rgb(60 30 10 / 0.05), 0 8px 24px -12px rgb(60 30 10 / 0.18);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #1a1310;
-    --foreground: #f4e9df;
-    --surface: #241a15;
-    --muted: #b8a395;
-    --line: #3d2e25;
-    --brand: #ef8a6f;
-    --brand-soft: #3a211a;
-    --accent: #f0b43c;
+    --background: #120c09;
+    --foreground: #f6ebe0;
+    --surface: #1c1410;
+    --surface-2: #241a14;
+    --muted: #b9a594;
+    --line: #362820;
+    --brand: #f08b6e;
+    --brand-deep: #ffcfb8;
+    --brand-soft: #34201a;
+    --accent: #f2b544;
+    --gold: #e0c27a;
     --ok: #6cc28e;
     --warn: #f0b43c;
     --bad: #f28b82;
+    --glow: rgb(242 181 68 / 0.22);
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -16px rgb(0 0 0 / 0.7);
   }
 }
 
@@ -34,18 +48,97 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
   --color-brand-soft: var(--brand-soft);
   --color-accent: var(--accent);
+  --color-gold: var(--gold);
   --color-ok: var(--ok);
   --color-warn: var(--warn);
   --color-bad: var(--bad);
   --font-sans: var(--font-noto), var(--font-noto-te), var(--font-noto-kn), var(--font-noto-ta), system-ui, sans-serif;
+  /* Latin headings in a serif; Telugu, Kannada and Tamil fall through to Noto Sans */
+  --font-display: var(--font-fraunces), var(--font-noto-te), var(--font-noto-kn), var(--font-noto-ta), Georgia, serif;
+  --shadow-soft: var(--shadow);
+  --animate-shimmer: shimmer 2.6s linear infinite;
+  --animate-spotlight: spotlight 2.2s ease 0.4s 1 forwards;
+  --animate-aurora: aurora 18s ease-in-out infinite alternate;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-marquee: marquee 60s linear infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+@keyframes spotlight {
+  0% { opacity: 0; transform: translate(-72%, -62%) scale(0.5); }
+  100% { opacity: 1; transform: translate(-50%, -40%) scale(1); }
+}
+@keyframes aurora {
+  0% { transform: translate3d(-10%, -6%, 0) rotate(0deg); }
+  100% { transform: translate3d(8%, 6%, 0) rotate(8deg); }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+h1, h2, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+}
+
+::selection {
+  background: var(--brand);
+  color: #fff;
+}
+
+/* Fine line grid and dot grid backgrounds, faded towards the edges */
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--foreground) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 7%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+@utility bg-dots {
+  background-image: radial-gradient(color-mix(in oklab, var(--foreground) 14%, transparent) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+@utility fade-radial {
+  mask-image: radial-gradient(ellipse at center, #000 30%, transparent 72%);
+}
+@utility fade-bottom {
+  mask-image: linear-gradient(to bottom, #000 60%, transparent);
+}
+@utility text-gradient {
+  background: linear-gradient(100deg, var(--brand) 10%, var(--accent) 60%, var(--brand) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@utility shimmer {
+  background-image: linear-gradient(110deg, transparent 35%, rgb(255 255 255 / 0.35) 50%, transparent 65%);
+  background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

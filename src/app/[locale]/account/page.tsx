@@ -25,7 +25,7 @@ export default async function AccountPage({ params }: PageProps<"/[locale]/accou
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <PageTitle>{t("title")}</PageTitle>
+      <PageTitle eyebrow={t("eyebrow")}>{t("title")}</PageTitle>
       <Card className="grid gap-3 sm:grid-cols-2">
         <div>
           <div className="text-sm text-muted">{t("status")}</div>
@@ -72,7 +72,7 @@ export default async function AccountPage({ params }: PageProps<"/[locale]/accou
           <h2 className="mb-3 font-semibold">{t("claims")}</h2>
           <ul className="flex flex-col gap-3">
             {claims.map((c) => (
-              <li key={c.id} className="rounded-lg border border-line p-3 text-sm">
+              <li key={c.id} className="rounded-xl border border-line p-3 text-sm">
                 <div className="flex flex-wrap justify-between gap-2">
                   <span className="font-medium">
                     {c.givenName} {c.surname} · {c.district.name}

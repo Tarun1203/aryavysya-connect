@@ -51,7 +51,7 @@ export function DuplicateList({
       )}
       <ul className="flex flex-col gap-2">
         {duplicates.map((d) => (
-          <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line px-3 py-2">
+          <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line px-3 py-2">
             <div>
               <Link href={`/person/${d.id}`} target="_blank" className="font-medium hover:text-brand">
                 {d.name}

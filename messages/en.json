@@ -1,8 +1,7 @@
 {
   "app": {
     "name": "Arya Vysya Vamsha Vruksham",
-    "tagline": "The verified family tree of the Arya Vysya community",
-    "footer": "Maintained with the district in-charges, local sanghas & sabhas and state Mahasabhas · Om Sri Vasavi Kanyaka Parameswari Namaha"
+    "tagline": "The verified family tree of the Arya Vysya community"
   },
   "nav": {
     "home": "Home",
@@ -14,10 +13,11 @@
     "login": "Sign in",
     "register": "Join",
     "logout": "Sign out",
-    "language": "Language"
+    "language": "Language",
+    "menu": "Menu"
   },
   "home": {
-    "heroTitle": "Preserve your family's vamsham for generations",
+    "heroTitle": "Preserve your family's <hl>vamsham</hl> for generations",
     "heroBody": "Record your ancestors, gotra, family name and native place. Every member is endorsed by their local sangha or sabha and verified by the district in-charge, and each family keeps its own branch accurate.",
     "ctaJoin": "Join your family",
     "ctaSignIn": "Sign in",
@@ -29,7 +29,37 @@
     "step3Body": "Edit your own family up to 5 generations above and below you.",
     "welcome": "Namaskaram, {name}",
     "pendingNotice": "Your membership is waiting for verification by the {district} district in-charge.",
-    "stats": "{people} people · {gotras} gotras · {districts} districts"
+    "eyebrow": "The verified Arya Vysya family tree",
+    "statPeople": "People in the trees",
+    "statGotras": "Gotras",
+    "statDistricts": "Districts",
+    "gotraStrip": "{count} gotras, each with its kula names in four scripts",
+    "featuresEyebrow": "Why families trust it",
+    "featuresTitle": "Everything a vamsham needs, kept together",
+    "featuresSub": "Built with the sanghas and sabhas, for the way our families actually record lineage.",
+    "f1Title": "Verified by your own sangha",
+    "f1Body": "Every member is endorsed by their local sangha or sabha and confirmed by the district in-charge before they see a single tree.",
+    "f2Title": "All three gotras, kept right",
+    "f2Body": "Own, birth and mother's gotra are tracked for everyone. A wife takes her husband's gotra on marriage and her birth gotra is never lost.",
+    "f3Title": "Marriage check before an alliance",
+    "f3Body": "Sagotra, the mother's gotra and close blood relations are checked against your region's rules, so elders can decide with the facts.",
+    "f4Title": "Native place down to the village",
+    "f4Body": "State, district, taluk, village and pincode, from the official directories, so families from the same ooru find each other.",
+    "f5Title": "Find relatives across the community",
+    "f5Body": "Search by name, gotra, kula or native place, in English, Telugu, Kannada or Tamil.",
+    "f6Title": "A picture of your whole lineage",
+    "f6Body": "See the family as a growing banyan, as a list by generation, or as a chart, from the eldest known ancestor down.",
+    "howEyebrow": "How it works",
+    "howTitle": "From your name to your whole lineage",
+    "privacyTitle": "Your family's details stay in the family",
+    "privacyBody": "Only verified members can see the trees. Photos are optional, hidden by default for women and decided by guardians for minors. Every change is recorded, and duplicate records are caught before they are made.",
+    "privacy1": "Members only",
+    "privacy2": "Photo consent",
+    "privacy3": "Every change logged",
+    "ctaTitle": "Plant your branch today",
+    "ctaBody": "Join, get endorsed by your local sangha, and start adding the generations you remember. The ones after you will thank you.",
+    "ctaMember": "Open my tree",
+    "ctaSearch": "Search the community"
   },
   "auth": {
     "email": "Email",
@@ -149,7 +179,8 @@
     "colCode": "Code",
     "colName": "Name",
     "colLife": "Born – died",
-    "colState": "Status"
+    "colState": "Status",
+    "eyebrow": "Vamsha vruksham"
   },
   "search": {
     "title": "Search the tree",
@@ -159,7 +190,9 @@
     "anyDistrict": "Any district",
     "submit": "Search",
     "results": "{count, plural, =0 {No people found} one {# person found} other {# people found}}",
-    "loginRequired": "Sign in as a verified member to search the tree."
+    "loginRequired": "Sign in as a verified member to search the tree.",
+    "eyebrow": "Community directory",
+    "start": "Search by name, gotra or native place to find relatives across every family tree."
   },
   "match": {
     "title": "Gotra & relationship check",
@@ -178,7 +211,8 @@
     "cross": "They are cross cousins — customary in many families.",
     "parallel": "They are parallel cousins — treated as brother and sister.",
     "disclaimer": "This is a guide based on recorded data only. Please consult family elders and your purohit.",
-    "maternalClash": "{gotra} is one side's gotra and the other's mother's gotra."
+    "maternalClash": "{gotra} is one side's gotra and the other's mother's gotra.",
+    "eyebrow": "Before an alliance"
   },
   "account": {
     "title": "My account",
@@ -198,7 +232,8 @@
     "role_DISTRICT_INCHARGE": "District in-charge",
     "role_STATE_ADMIN": "State head (Mahasabha / Mahamandali)",
     "organization": "Local sangha / sabha",
-    "adminOf": "Administers"
+    "adminOf": "Administers",
+    "eyebrow": "Your membership"
   },
   "admin": {
     "title": "Administration",
@@ -313,7 +348,8 @@
     "mergeHint": "Merging moves its people and kula names to the chosen gotra. A gotra can be deleted without merging only when nobody uses it.",
     "gotraInUse": "{count, plural, one {# record uses} other {# records use}} this gotra. Choose the gotra to merge it into.",
     "notFound": "Not found",
-    "removeConfirm": "Yes, remove this gotra"
+    "removeConfirm": "Yes, remove this gotra",
+    "eyebrow": "Stewards of the tree"
   },
   "errors": {
     "required": "Please fill in the required fields",
@@ -471,5 +507,15 @@
     "tooLarge": "That photo is too large.",
     "notImage": "That file isn't a photo we can use (JPEG, PNG or WebP).",
     "saved": "Photo saved."
+  },
+  "footer": {
+    "explore": "Explore",
+    "community": "Community",
+    "how": "How it works",
+    "features": "Features",
+    "privacy": "Privacy",
+    "iconCredit": "3D icons: 3dicons (CC0)",
+    "maintained": "Maintained with the district in-charges, local sanghas & sabhas and state Mahasabhas",
+    "blessing": "Om Sri Vasavi Kanyaka Parameswari Namaha"
   }
 }

@@ -29,7 +29,7 @@ export function PersonPicker({ name, placeholder, initial }: { name: string; pla
     <div className="relative">
       <input type="hidden" name={name} value={chosen?.id ?? ""} />
       {chosen ? (
-        <div className="flex items-center justify-between rounded-lg border border-brand bg-brand-soft px-3 py-2">
+        <div className="flex items-center justify-between rounded-xl border border-brand bg-brand-soft px-3 py-2">
           <span>
             <span className="font-medium">{chosen.label}</span>
             {chosen.detail && <span className="ml-2 text-xs text-muted">{chosen.detail}</span>}
@@ -40,7 +40,7 @@ export function PersonPicker({ name, placeholder, initial }: { name: string; pla
         </div>
       ) : (
         <input
-          className="w-full rounded-lg border border-line bg-background px-3 py-2 outline-none focus:border-brand"
+          className="w-full rounded-xl border border-line bg-background px-3 py-2 outline-none focus:border-brand"
           placeholder={placeholder}
           value={q}
           onChange={(e) => {
@@ -50,7 +50,7 @@ export function PersonPicker({ name, placeholder, initial }: { name: string; pla
         />
       )}
       {!chosen && hits.length > 0 && (
-        <ul className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-line bg-surface shadow-lg">
+        <ul className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-line bg-surface shadow-lg">
           {hits.map((h) => (
             <li key={h.id}>
               <button

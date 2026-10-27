@@ -8,7 +8,8 @@ import { getFamily } from "@/lib/tree";
 import { fullName, gotraLabel, kulaLabels, lifeSpan, memberCode, personState } from "@/lib/reference";
 import { removeLinkAction } from "@/app/actions/person";
 import { respondMarriageAction, updateMarriageAction } from "@/app/actions/marriage";
-import { Card, Notice } from "@/components/ui";
+import Image from "next/image";
+import { Badge, buttonClass, Card, Notice } from "@/components/ui";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { defaultVisible, photoRights, photoUrl } from "@/lib/photo";
 import { removePhotoAction, setPhotoVisibleAction, uploadPhotoAction } from "@/app/actions/photo";
@@ -62,7 +63,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
   ];
 
   const PersonLink = ({ p, linkId, kind }: { p: P; linkId?: string; kind?: "parentChild" | "couple" }) => (
-    <li className="flex items-center justify-between gap-2 rounded-lg border border-line px-3 py-2">
+    <li className="flex items-center justify-between gap-2 rounded-xl border border-line px-3 py-2">
       <Link href={`/person/${p.id}`} className="hover:text-brand">
         <span className="font-medium">{fullName(p)}</span>
         <span className="ml-2 text-xs text-muted">
@@ -81,39 +82,53 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
-        {showPhoto && (
-          // eslint-disable-next-line @next/next/no-img-element -- served from our own access-checked route
-          <img src={photoUrl(person.id, person.photo!.updatedAt)} alt={fullName(person)} className={`size-20 rounded-full object-cover ring-2 ${person.photo!.visible ? "ring-brand" : "ring-line opacity-80"}`} />
-        )}
-        <div>
-          <h1 className="text-3xl font-bold text-brand">
-            {fullName(person)}
-            {person.user?.id === user.id && <span className="ml-3 rounded-full bg-accent px-2 py-0.5 align-middle text-xs text-white">{t("you")}</span>}
-          </h1>
-          {(person.givenNameLocal || person.surnameLocal) && (
-            <p className="text-xl">{[person.givenNameLocal, person.surnameLocal].filter(Boolean).join(" ")}</p>
-          )}
-          <p className="mt-1 text-muted">
-            {[lifeSpan(person), memberCode(person.memberNo), t(`state_${personState(person)}`)].filter(Boolean).join(" · ")}
-          </p>
-          {person.aliases.length > 0 && (
-            <p className="text-sm text-muted">
-              {t("aliases")}: {person.aliases.join(", ")}
-            </p>
-          )}
+      {/* Profile header: photo (or a 3D figure), names and record details */}
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-line bg-surface shadow-soft">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-20 bg-gradient-to-r from-[#5e1a0e] via-[#a3341f] to-[#c77d12]">
+          <div className="bg-dots absolute inset-0 opacity-25 [--foreground:#fff]" />
         </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href={`/tree/${id}`} className="rounded-lg border border-line bg-surface px-4 py-2 text-sm font-semibold hover:bg-brand-soft">
-            {t("viewTree")}
-          </Link>
-          {editable && (
-            <Link href={`/person/${id}/edit`} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">
-              {t("edit")}
+        <div className="relative flex flex-wrap items-end justify-between gap-4 px-5 pb-5 pt-10 sm:px-7">
+          <div className="flex flex-wrap items-end gap-5">
+            <div className={`grid size-28 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-surface bg-surface-2 shadow-soft ring-2 ${person.gender === "FEMALE" ? "ring-gold/70" : "ring-brand/50"}`}>
+              {showPhoto ? (
+                // eslint-disable-next-line @next/next/no-img-element -- served from our own access-checked route
+                <img src={photoUrl(person.id, person.photo!.updatedAt)} alt={fullName(person)} className={`size-full object-cover ${person.photo!.visible ? "" : "opacity-80"}`} />
+              ) : (
+                <Image src={`/icons/3d/${person.gender === "FEMALE" ? "girl" : "boy"}.png`} alt="" width={96} height={96} className="size-20" />
+              )}
+            </div>
+            <div className="flex flex-col gap-1 pb-1">
+              <h1 className="flex flex-wrap items-center gap-3 text-3xl font-semibold sm:text-4xl">
+                {fullName(person)}
+                {person.user?.id === user.id && <Badge tone="gold">{t("you")}</Badge>}
+              </h1>
+              {(person.givenNameLocal || person.surnameLocal) && (
+                <p className="font-display text-xl text-muted">{[person.givenNameLocal, person.surnameLocal].filter(Boolean).join(" ")}</p>
+              )}
+              <div className="mt-1 flex flex-wrap gap-2">
+                <Badge>{t(`state_${personState(person)}`)}</Badge>
+                {lifeSpan(person) && <Badge tone="muted">{lifeSpan(person)}</Badge>}
+                <Badge tone="muted">
+                  <span className="font-mono">{memberCode(person.memberNo)}</span>
+                </Badge>
+              </div>
+              {person.aliases.length > 0 && (
+                <p className="text-sm text-muted">
+                  {t("aliases")}: {person.aliases.join(", ")}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/tree/${id}`} className={buttonClass("ghost")}>
+              {t("viewTree")}
             </Link>
-          )}
+            {editable && (
+              <Link href={`/person/${id}/edit`} className={buttonClass("primary")}>
+                {t("edit")}
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 
@@ -133,15 +148,15 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
                 {pr.incoming ? (
                   <>
                     <form action={respondMarriageAction.bind(null, pr.linkId, true)}>
-                      <button className="rounded-lg bg-brand px-3 py-1 text-sm text-white hover:opacity-90">{tm("accept")}</button>
+                      <button className={buttonClass("primary", "px-3 py-1")}>{tm("accept")}</button>
                     </form>
                     <form action={respondMarriageAction.bind(null, pr.linkId, false)}>
-                      <button className="rounded-lg border border-line px-3 py-1 text-sm hover:bg-surface">{tm("decline")}</button>
+                      <button className="rounded-xl border border-line px-3 py-1 text-sm hover:bg-surface">{tm("decline")}</button>
                     </form>
                   </>
                 ) : (
                   <form action={removeLinkAction.bind(null, "couple", pr.linkId, id)}>
-                    <button className="rounded-lg border border-line px-3 py-1 text-sm hover:bg-surface">{tm("withdraw")}</button>
+                    <button className="rounded-xl border border-line px-3 py-1 text-sm hover:bg-surface">{tm("withdraw")}</button>
                   </form>
                 )}
               </span>
@@ -245,17 +260,17 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
           {(canParent || canChild || canSpouse) && (
             <div className="flex flex-wrap gap-2 sm:col-span-2">
               {canParent && parents.length < 2 && (
-                <Link href={`/person/${id}/add/parent`} className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand hover:bg-brand-soft">
+                <Link href={`/person/${id}/add/parent`} className="rounded-xl border border-brand px-3 py-1.5 text-sm text-brand hover:bg-brand-soft">
                   + {t("addParent")}
                 </Link>
               )}
               {canSpouse && (
-                <Link href={`/person/${id}/add/spouse`} className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand hover:bg-brand-soft">
+                <Link href={`/person/${id}/add/spouse`} className="rounded-xl border border-brand px-3 py-1.5 text-sm text-brand hover:bg-brand-soft">
                   + {t("addSpouse")}
                 </Link>
               )}
               {canChild && (
-                <Link href={`/person/${id}/add/child`} className="rounded-lg border border-brand px-3 py-1.5 text-sm text-brand hover:bg-brand-soft">
+                <Link href={`/person/${id}/add/child`} className="rounded-xl border border-brand px-3 py-1.5 text-sm text-brand hover:bg-brand-soft">
                   + {t("addChild")}
                 </Link>
               )}

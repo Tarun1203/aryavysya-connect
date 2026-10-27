@@ -44,7 +44,7 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
 
   return (
     <div>
-      <PageTitle sub={scopeLabel}>{t("title")}</PageTitle>
+      <PageTitle eyebrow={t("eyebrow")} sub={scopeLabel}>{t("title")}</PageTitle>
       {scope ? (
         <>
           <AdminTabs tabs={tabs} />

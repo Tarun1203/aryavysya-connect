@@ -6,7 +6,7 @@ import { editableIds } from "@/lib/permissions";
 import { fullName, memberCode } from "@/lib/reference";
 import { marriageCheck } from "@/lib/marriage";
 import { respondMarriageAction } from "@/app/actions/marriage";
-import { Card } from "./ui";
+import { buttonClass, Card } from "./ui";
 
 /**
  * Marriage links proposed by another family to someone this user may answer for: themselves,
@@ -31,7 +31,7 @@ export async function MarriageRequests({ user }: { user: SessionUser }) {
       <p className="mb-3 text-sm text-muted">{t("requestsHint")}</p>
       <ul className="flex flex-col gap-3">
         {requests.map((r, i) => (
-          <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line p-3 text-sm">
+          <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line p-3 text-sm">
             <div>
               <div>
                 <Link href={`/person/${r.person1Id}`} className="font-medium hover:text-brand">
@@ -58,11 +58,11 @@ export async function MarriageRequests({ user }: { user: SessionUser }) {
             <div className="flex gap-2">
               {!checks[i].blocked && (
                 <form action={respondMarriageAction.bind(null, r.id, true)}>
-                  <button className="rounded-lg bg-brand px-3 py-1 text-white hover:opacity-90">{t("accept")}</button>
+                  <button className={buttonClass("primary", "px-3 py-1")}>{t("accept")}</button>
                 </form>
               )}
               <form action={respondMarriageAction.bind(null, r.id, false)}>
-                <button className="rounded-lg border border-line px-3 py-1 hover:bg-surface">{t("decline")}</button>
+                <button className="rounded-xl border border-line px-3 py-1 hover:bg-surface">{t("decline")}</button>
               </form>
             </div>
           </li>

@@ -39,7 +39,7 @@ export function UploadLocations() {
         type="file"
         accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        className="text-sm file:mr-3 file:rounded-lg file:border file:border-line file:bg-surface file:px-3 file:py-2"
+        className="text-sm file:mr-3 file:rounded-xl file:border file:border-line file:bg-surface file:px-3 file:py-2"
       />
       <Button onClick={upload} disabled={!file || busy} className="self-start">
         {busy ? t("uploading") : t("upload")}
