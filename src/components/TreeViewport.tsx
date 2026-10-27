@@ -3,37 +3,77 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
-/** Scrollable, zoomable frame for the pictorial tree; opens centred on the person the tree was opened for. */
+/**
+ * Frame for the tree views: as wide as the window and nearly as tall, scrollable and zoomable,
+ * with Fit (whole tree on screen) and Full screen. Opens centred on the person the tree was
+ * opened for.
+ */
 export function TreeViewport({ children }: { children: ReactNode }) {
   const t = useTranslations("tree");
+  const frame = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLDivElement>(null);
+  const content = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
+  const [full, setFull] = useState(false);
 
-  useEffect(() => {
+  const centre = () => {
     const el = box.current;
     const focus = el?.querySelector("[data-focus]");
     if (!el || !focus) return;
     const a = el.getBoundingClientRect(), b = focus.getBoundingClientRect();
     el.scrollLeft += b.left - a.left - a.width / 2 + b.width / 2;
     el.scrollTop += b.top - a.top - a.height / 2 + b.height / 2;
+  };
+  useEffect(centre, []);
+
+  useEffect(() => {
+    const onChange = () => setFull(document.fullscreenElement === frame.current);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
-  const button = "size-8 rounded-xl border border-line bg-surface text-lg leading-none hover:bg-brand-soft";
+  // Zoom so the whole tree fits the frame (never above 100%)
+  const fit = () => {
+    const el = box.current, c = content.current;
+    if (!el || !c) return;
+    // The rendered size includes the current zoom; divide it out to get the tree's natural size
+    const r = c.getBoundingClientRect();
+    const w = r.width / zoom, h = r.height / zoom;
+    setZoom(Math.max(0.3, Math.min(1, (el.clientWidth - 8) / w, (el.clientHeight - 8) / h)));
+    el.scrollTo({ left: 0, top: 0 });
+  };
+
+  const toggleFull = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void frame.current?.requestFullscreen?.();
+  };
+
+  const button = "grid h-8 min-w-8 place-items-center rounded-xl border border-line bg-surface/90 px-2 text-sm leading-none shadow-soft backdrop-blur hover:bg-brand-soft";
   return (
-    <div className="relative">
+    // Breaks out of the centred page column to use the window's width
+    <div ref={frame} className={`relative ${full ? "bg-background" : "left-1/2 w-[calc(100vw-2rem)] max-w-[1800px] -translate-x-1/2"}`}>
       <div className="absolute right-3 top-3 z-10 flex gap-1">
-        <button type="button" className={button} onClick={() => setZoom((z) => Math.max(0.4, z - 0.15))} aria-label={t("zoomOut")}>
+        <button type="button" className={button} onClick={() => setZoom((z) => Math.max(0.3, z - 0.15))} aria-label={t("zoomOut")}>
           −
         </button>
-        <button type="button" className={`${button} w-auto px-2 text-xs`} onClick={() => setZoom(1)}>
+        <button type="button" className={`${button} text-xs`} onClick={() => (setZoom(1), requestAnimationFrame(centre))} title={t("zoomReset")}>
           {Math.round(zoom * 100)}%
         </button>
         <button type="button" className={button} onClick={() => setZoom((z) => Math.min(2, z + 0.15))} aria-label={t("zoomIn")}>
           +
         </button>
+        <button type="button" className={`${button} text-xs`} onClick={fit}>
+          {t("fit")}
+        </button>
+        <button type="button" className={`${button} text-xs`} onClick={toggleFull} aria-pressed={full}>
+          {full ? t("exitFullScreen") : t("fullScreen")}
+        </button>
       </div>
-      <div ref={box} className="max-h-[75vh] overflow-auto rounded-xl border border-line bg-gradient-to-b from-brand-soft/40 to-background">
-        <div style={{ zoom }} className="mx-auto w-max p-4">
+      <div
+        ref={box}
+        className={`overflow-auto border border-line bg-gradient-to-b from-brand-soft/40 to-background ${full ? "h-screen" : "h-[calc(100dvh-8rem)] min-h-[420px] rounded-2xl"}`}
+      >
+        <div ref={content} style={{ zoom }} className="mx-auto w-max p-4 pt-14">
           {children}
         </div>
       </div>

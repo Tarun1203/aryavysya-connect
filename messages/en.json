@@ -183,7 +183,11 @@
     "eyebrow": "Vamsha vruksham",
     "viewHierarchy": "Hierarchy",
     "hierarchyHint": "The eldest known ancestor at the top, each generation one row below. A couple shares a card; tap anyone to open their page.",
-    "focusBadge": "This person"
+    "focusBadge": "This person",
+    "fit": "Fit",
+    "fullScreen": "Full screen",
+    "exitFullScreen": "Exit full screen",
+    "zoomReset": "Back to 100%"
   },
   "search": {
     "title": "Search the tree",
