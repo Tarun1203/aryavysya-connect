@@ -21,6 +21,7 @@ import { Card, PageTitle } from "@/components/ui";
 import { PictorialTree } from "@/components/PictorialTree";
 import { TreeViewport } from "@/components/TreeViewport";
 import { Segmented } from "@/components/Segmented";
+import { HierarchyTree } from "@/components/HierarchyTree";
 
 export default async function TreePage({
   params,
@@ -31,19 +32,21 @@ export default async function TreePage({
   setRequestLocale(locale);
   const user = await requireViewer(locale);
   const t = await getTranslations("tree");
-  const current = view === "list" || view === "chart" ? view : "picture";
+  const VIEWS = ["hierarchy", "picture", "list", "chart"] as const;
+  const current = (VIEWS as readonly string[]).includes(view ?? "") ? (view as (typeof VIEWS)[number]) : "hierarchy";
+  const viewLabel = { hierarchy: "viewHierarchy", picture: "viewPicture", list: "viewList", chart: "viewChart" } as const;
   const tabs = (
     <Segmented
       className="w-fit"
-      items={(["picture", "list", "chart"] as const).map((v) => ({
-        href: v === "picture" ? `/tree/${id}` : `/tree/${id}?view=${v}`,
-        label: t(v === "picture" ? "viewPicture" : v === "list" ? "viewList" : "viewChart"),
+      items={VIEWS.map((v) => ({
+        href: v === "hierarchy" ? `/tree/${id}` : `/tree/${id}?view=${v}`,
+        label: t(viewLabel[v]),
         active: current === v,
       }))}
     />
   );
 
-  if (view !== "chart") {
+  if (current !== "chart") {
     // The whole lineage: from the eldest known ancestor of this person up to three generations past them
     const { rootId, path } = await lineageRoot(id, 8);
     const root = await descendants(rootId, Math.min(10, path.length + 2));
@@ -51,7 +54,7 @@ export default async function TreePage({
     const person = path.length > 1 ? (await pedigree(id, 1))[0][0] : root;
     const tp = await getTranslations("person");
 
-    if (view === "list") {
+    if (current === "list") {
       // Everyone in the lineage, generation by generation, in birth order
       const rows: { gen: number; node: DescendantNode }[] = [];
       const walk = (n: DescendantNode, gen: number) => {
@@ -152,25 +155,52 @@ export default async function TreePage({
       );
     }
 
+    const heading = t("title", { name: person ? fullName(person) : fullName(root) });
+    if (current === "picture") {
+      return (
+        <div className="flex flex-col gap-4">
+          <PageTitle eyebrow={t("eyebrow")} sub={t("pictureHint")}>
+            {heading}
+          </PageTitle>
+          {tabs}
+          <TreeViewport>
+            <PictorialTree
+              root={root}
+              path={path}
+              focusId={id}
+              href={(pid) => `/${locale}/person/${pid}`}
+              labels={{
+                generation: (n) => t("generation", { n }),
+                you: t("thisPerson"),
+              }}
+            />
+          </TreeViewport>
+          <p className="text-xs text-muted">{t("legend")}</p>
+        </div>
+      );
+    }
+
+    // Default: the top-down hierarchy
     return (
       <div className="flex flex-col gap-4">
-        <PageTitle eyebrow={t("eyebrow")} sub={t("pictureHint")}>
-          {t("title", { name: person ? fullName(person) : fullName(root) })}
+        <PageTitle eyebrow={t("eyebrow")} sub={t("hierarchyHint")}>
+          {heading}
         </PageTitle>
         {tabs}
         <TreeViewport>
-          <PictorialTree
+          <HierarchyTree
             root={root}
             path={path}
             focusId={id}
+            locale={locale}
             href={(pid) => `/${locale}/person/${pid}`}
             labels={{
               generation: (n) => t("generation", { n }),
-              you: t("thisPerson"),
+              you: t("focusBadge"),
+              eldest: t("eldest"),
             }}
           />
         </TreeViewport>
-        <p className="text-xs text-muted">{t("legend")}</p>
       </div>
     );
   }

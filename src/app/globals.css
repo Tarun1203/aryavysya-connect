@@ -142,3 +142,86 @@ h1, h2, .font-display {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Top-down family hierarchy (HierarchyTree): nested lists drawn as an org chart. Each child draws
+ * half of the horizontal rail above it plus its own drop; the parent's list draws the stem down.
+ */
+.htree {
+  --rail: color-mix(in oklab, var(--muted) 45%, transparent);
+  --lit: var(--accent);
+  --gap: 28px;
+}
+.htree ul {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding-top: var(--gap);
+}
+.htree > ul {
+  padding-top: 0;
+}
+.htree li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--gap) 10px 0;
+}
+.htree > ul > li {
+  padding-top: 8px;
+}
+.htree li::before,
+.htree li::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 50%;
+  width: 50%;
+  height: var(--gap);
+  border-top: 2px solid var(--rail);
+}
+.htree li::after {
+  right: auto;
+  left: 50%;
+  border-left: 2px solid var(--rail);
+}
+.htree > ul > li::before,
+.htree > ul > li::after,
+.htree li:only-child::before {
+  display: none;
+}
+/* An only child needs just the drop, no rail */
+.htree li:only-child::after {
+  border-top: 0;
+  width: 0;
+  margin-left: -1px;
+}
+.htree li:first-child::before,
+.htree li:last-child::after {
+  border: 0 none;
+}
+.htree li:last-child:not(:only-child)::before {
+  border-right: 2px solid var(--rail);
+  border-top-right-radius: 12px;
+}
+.htree li:first-child:not(:only-child)::after {
+  border-top-left-radius: 12px;
+}
+.htree ul ul::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  margin-left: -1px;
+  height: var(--gap);
+  border-left: 2px solid var(--rail);
+}
+/* The line from the eldest ancestor down to the person, in turmeric */
+.htree ul[data-path]::before,
+.htree li[data-path]::after {
+  border-left-color: var(--lit);
+}
+.htree li[data-path]:last-child:not(:only-child)::before {
+  border-right-color: var(--lit);
+}

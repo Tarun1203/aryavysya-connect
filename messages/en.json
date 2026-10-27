@@ -180,7 +180,10 @@
     "colName": "Name",
     "colLife": "Born – died",
     "colState": "Status",
-    "eyebrow": "Vamsha vruksham"
+    "eyebrow": "Vamsha vruksham",
+    "viewHierarchy": "Hierarchy",
+    "hierarchyHint": "The eldest known ancestor at the top, each generation one row below. A couple shares a card; tap anyone to open their page.",
+    "focusBadge": "This person"
   },
   "search": {
     "title": "Search the tree",
