@@ -188,6 +188,8 @@ export async function setUserStatusAction(userId: string, status: "APPROVED" | "
     if (!inScope) return;
   }
   await db.user.update({ where: { id: userId }, data: { status } });
+  // A suspended member is signed out of every device at once
+  if (status === "SUSPENDED") await db.session.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date(), revokedReason: "by-admin" } });
   await audit(u, status === "SUSPENDED" ? "suspend" : "reactivate", "User", userId);
   done("/admin/users");
 }

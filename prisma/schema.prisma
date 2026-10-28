@@ -307,6 +307,7 @@ model User {
   consentsGiven      Consent[]       @relation("ConsentGiver")
   consentsWithdrawn  Consent[]       @relation("ConsentWithdrawer")
   otpChallenges      OtpChallenge[]
+  sessions           Session[]
 }
 
 /// A member's request to be verified as belonging to a family.
@@ -664,4 +665,27 @@ model RateLimit {
   updatedAt    DateTime  @default(now()) @updatedAt
 
   @@index([updatedAt])
+}
+
+/**
+ * One signed-in device. The cookie holds only this id, encrypted (src/lib/session-token.ts); every
+ * request checks the row is still live, so a session can be ended before it expires – by signing
+ * out, from "Where you're signed in" on the account page, or by an administrator.
+ */
+model Session {
+  /// Random, 32 bytes base64url
+  id            String    @id
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Browser and system, e.g. "Chrome on Android" – shown to the member, nothing more precise
+  device        String?
+  createdAt     DateTime  @default(now())
+  lastSeenAt    DateTime  @default(now())
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  /// "signed-out", "by-member", "by-admin"
+  revokedReason String?
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
 }

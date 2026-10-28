@@ -1,7 +1,8 @@
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { Link, redirect } from "@/i18n/navigation";
 import { db } from "@/lib/db";
-import { currentUser } from "@/lib/auth";
+import { currentSessionId, currentUser } from "@/lib/auth";
+import { endDeviceSessionAction, endOtherSessionsAction } from "@/app/actions/session";
 import { editableIds } from "@/lib/permissions";
 import { fullName } from "@/lib/reference";
 import { Badge, Card, Notice, PageTitle } from "@/components/ui";
@@ -21,6 +22,11 @@ export default async function AccountPage({ params }: PageProps<"/[locale]/accou
   const tp = await getTranslations("person");
   const to = await getTranslations("otp");
   const tr = await getTranslations("review");
+  const ts = await getTranslations("sessions");
+  const [sid, devices] = await Promise.all([
+    currentSessionId(),
+    db.session.findMany({ where: { userId: u.id, revokedAt: null, expiresAt: { gt: new Date() } }, orderBy: { lastSeenAt: "desc" } }),
+  ]);
   // Proposals about this member's own record, and the requests they made
   const [aboutMe, myRequests] = await Promise.all([
     u.personId ? db.changeRequest.findMany({ where: { personId: u.personId, status: "PENDING", proposedById: { not: u.id } }, include: requestInclude, orderBy: { createdAt: "desc" } }) : [],
@@ -92,6 +98,36 @@ export default async function AccountPage({ params }: PageProps<"/[locale]/accou
           </details>
         </Card>
       )}
+
+      {/* Where you're signed in: every live session, with sign-out buttons */}
+      <Card className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold">{ts("title")}</h2>
+          {devices.length > 1 && (
+            <form action={endOtherSessionsAction}>
+              <button className="text-sm text-bad hover:underline">{ts("endOthers")}</button>
+            </form>
+          )}
+        </div>
+        <p className="text-sm text-muted">{ts("intro")}</p>
+        <ul className="flex flex-col gap-2">
+          {devices.map((d) => (
+            <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line px-3 py-2 text-sm">
+              <span>
+                <span className="font-medium">{d.device ?? ts("unknownDevice")}</span>
+                {d.id === sid && <Badge tone="gold">{ts("thisDevice")}</Badge>}
+                <span className="block text-xs text-muted">
+                  {ts("since", { date: format.dateTime(d.createdAt, { dateStyle: "medium" }) })} ·{" "}
+                  {ts("lastSeen", { date: format.dateTime(d.lastSeenAt, { dateStyle: "medium", timeStyle: "short" }) })}
+                </span>
+              </span>
+              <form action={endDeviceSessionAction.bind(null, d.id)}>
+                <button className="text-xs text-muted hover:text-bad">{d.id === sid ? ts("signOutHere") : ts("signOutThere")}</button>
+              </form>
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       {(u.role === "MEMBER" || u.role === "LOCAL_ADMIN") && scope && scope.size > 0 && (
         <Notice tone="ok">{t("editScope", { count: scope.size })}</Notice>

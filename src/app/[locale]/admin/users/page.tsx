@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/guard";
 import { adminScope, districtWhere } from "@/lib/permissions";
 import { setUserStatusAction } from "@/app/actions/admin";
+import { adminEndUserSessionsAction } from "@/app/actions/session";
 import { Card, Input } from "@/components/ui";
 
 export default async function UsersPage({ params, searchParams }: PageProps<"/[locale]/admin/users">) {
@@ -15,6 +16,7 @@ export default async function UsersPage({ params, searchParams }: PageProps<"/[l
   if (!scope || scope.kind === "local") redirect({ href: "/admin", locale });
   const t = await getTranslations("admin");
   const ta = await getTranslations("account");
+  const ts = await getTranslations("sessions");
 
   const dWhere = districtWhere(scope!);
   const users = await db.user.findMany({
@@ -26,6 +28,13 @@ export default async function UsersPage({ params, searchParams }: PageProps<"/[l
     orderBy: [{ role: "desc" }, { name: "asc" }],
     take: 200,
   });
+  // Signed-in devices per member, for "Sign out everywhere"
+  const live = await db.session.groupBy({
+    by: ["userId"],
+    where: { userId: { in: users.map((x) => x.id) }, revokedAt: null, expiresAt: { gt: new Date() } },
+    _count: { _all: true },
+  });
+  const devices = new Map(live.map((l) => [l.userId, l._count._all]));
 
   return (
     <div className="flex flex-col gap-4">
@@ -62,6 +71,11 @@ export default async function UsersPage({ params, searchParams }: PageProps<"/[l
                 <td className="p-3 text-xs">{[u.district?.name, u.organization?.name].filter(Boolean).join(" · ")}</td>
                 <td className="p-3">{ta(`status_${u.status}`)}</td>
                 <td className="p-3 text-right">
+                  {u.role !== "SUPER_ADMIN" && u.id !== user.id && (devices.get(u.id) ?? 0) > 0 && (
+                    <form action={adminEndUserSessionsAction.bind(null, u.id)} className="mb-1">
+                      <button className="text-xs text-brand hover:underline">{ts("adminSignOut", { count: devices.get(u.id) ?? 0 })}</button>
+                    </form>
+                  )}
                   {u.role !== "SUPER_ADMIN" && u.id !== user.id && u.status === "APPROVED" && (
                     <form action={setUserStatusAction.bind(null, u.id, "SUSPENDED")}>
                       <button className="text-xs text-bad hover:underline">{t("suspend")}</button>

@@ -51,8 +51,9 @@ export default async function PrivacyPage({ params }: PageProps<"/[locale]/priva
             disputes and their decisions, and verification by administrators.
           </li>
           <li>
-            <strong>Security:</strong> a sign-in cookie; for SMS sign-in codes, your mobile number and a scrambled (hashed) form of your IP address. Codes
-            themselves are stored only as hashes.
+            <strong>Security:</strong> a sign-in cookie, and for each device you sign in on, its browser and system type (such as &quot;Chrome on
+            Android&quot;) and when it was last used, so you can see and sign out your devices; for SMS sign-in codes, your mobile number and a
+            scrambled (hashed) form of your IP address. Codes themselves are stored only as hashes.
           </li>
           <li>
             We do <strong>not</strong> collect Aadhaar, PAN, bank or card details, your precise location or your contacts, and we use no analytics or
@@ -167,6 +168,7 @@ export default async function PrivacyPage({ params }: PageProps<"/[locale]/priva
           <li>Records of ancestors who have passed away: kept as the family&apos;s history.</li>
           <li>Consent records and the history of changes: kept as proof of what was agreed and done, for as long as the record they relate to.</li>
           <li>SMS sign-in code requests: deleted after 30 days.</li>
+          <li>Records of signed-in devices: deleted a month after the session ends.</li>
         </ul>
       </Section>
 
@@ -180,8 +182,8 @@ export default async function PrivacyPage({ params }: PageProps<"/[locale]/priva
 
       <Section n={11} title="Cookies">
         <p>
-          We use one essential cookie, <code>vamsha_session</code>, to keep you signed in for up to 7 days. There are no other cookies – no analytics, no
-          advertising.
+          We use one essential cookie, <code>vamsha_session</code>, to keep you signed in for up to 7 days. It is encrypted and holds only a random
+          session number; you can end any session from your account page. There are no other cookies – no analytics, no advertising.
         </p>
       </Section>
 

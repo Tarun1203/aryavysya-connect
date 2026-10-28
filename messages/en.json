@@ -779,5 +779,17 @@
     "signedIn": "sent while signed in",
     "save": "Save",
     "responsePlaceholder": "The answer given to the sender (needed to resolve)"
+  },
+  "sessions": {
+    "title": "Where you're signed in",
+    "intro": "Every device signed in to your account. If you don't recognise one, sign it out.",
+    "endOthers": "Sign out everywhere else",
+    "unknownDevice": "Unknown device",
+    "thisDevice": "This device",
+    "since": "Signed in {date}",
+    "lastSeen": "last used {date}",
+    "signOutHere": "Sign out",
+    "signOutThere": "Sign out this device",
+    "adminSignOut": "Sign out everywhere ({count})"
   }
 }
