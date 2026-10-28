@@ -203,26 +203,37 @@ export default async function TreePage({
       );
     }
 
-    // Default: the top-down hierarchy
+    // Default: the top-down hierarchy. Who the viewer may edit decides which cards get a menu
+    // (null: an administrator over everyone); every page it links to checks again.
+    const editable = await editableIds(user);
     return (
       <div className="flex flex-col gap-4">
         <PageTitle eyebrow={t("eyebrow")} sub={t("hierarchyHint")}>
           {heading}
         </PageTitle>
         {tabs}
-        <TreeViewport>
+        <TreeViewport gotraSwitch>
           <HierarchyTree
             root={root}
             path={path}
             focusId={id}
             locale={locale}
             href={(pid) => `/${locale}/person/${pid}`}
+            canEdit={(pid) => editable === null || editable.has(pid)}
             labels={{
               generation: (n) => t("generation", { n }),
               you: t("focusBadge"),
               eldest: t("eldest"),
               childNo: (n) => tp("childNo", { n }),
               spouseNo: (n) => tp("spouseNo", { n }),
+              gotraShort: { own: t("gotraShortOwn"), birth: t("gotraShortBirth"), mother: t("gotraShortMother") },
+              actions: t("actions"),
+              open: t("openPerson"),
+              edit: tp("edit"),
+              addParent: tp("addParent"),
+              addSpouse: tp("addSpouse"),
+              addChild: tp("addChild"),
+              collapse: (n) => t("collapseBranch", { n }),
             }}
           />
         </TreeViewport>

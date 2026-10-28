@@ -42,7 +42,8 @@ export async function exportLineage(user: SessionUser, personId: string, private
       where: { id: { in: ids } },
       select: {
         id: true, givenName: true, surname: true, givenNameLocal: true, surnameLocal: true, gender: true, isLiving: true,
-        birthDate: true, birthPlace: true, deathDate: true, occupation: true, birthGotra: { select: { name: true } },
+        birthDate: true, birthPlace: true, deathDate: true, occupation: true, nakshatra: true, rasi: true, kuladevata: true,
+        gotra: { select: { name: true } }, birthGotra: { select: { name: true } }, maternalGotra: { select: { name: true } },
       },
     }),
     db.couple.findMany({ where: { status: { not: "PROPOSED" }, person1Id: { in: ids }, person2Id: { in: ids } } }),
@@ -68,7 +69,14 @@ export async function exportLineage(user: SessionUser, personId: string, private
       birthPlace: passed ? p.birthPlace : null,
       deathDate: p.deathDate,
       occupation: passed ? p.occupation : null,
-      gotra: p.birthGotra?.name ?? null,
+      // Gotras and the family deity are community identity, shown to every member; the birth star
+      // and sign are personal, so they leave only for those who have passed
+      gotra: p.gotra?.name ?? null,
+      birthGotra: p.birthGotra?.name ?? null,
+      maternalGotra: p.maternalGotra?.name ?? null,
+      kuladevata: p.kuladevata,
+      nakshatra: passed ? p.nakshatra : null,
+      rasi: passed ? p.rasi : null,
     };
   });
   const parentLinks = [...links.map((l) => ({ parent: l.parentId, child: l.childId })), ...childLinks]
@@ -126,9 +134,8 @@ export async function previewImport(text: string, districtId: string | null): Pr
   const unknown = new Set<string>();
   let matched = 0;
   for (const p of plan.people) {
-    if (!p.gotra) continue;
-    if (gotras.has(p.gotra.trim().toLowerCase())) matched++;
-    else unknown.add(p.gotra);
+    for (const g of [p.gotra, p.birthGotra, p.maternalGotra]) if (g && !gotras.has(g.trim().toLowerCase())) unknown.add(g);
+    if (gotraOf(gotras, p.birthGotra)) matched++;
   }
   const possibleDuplicates: ImportPreview["possibleDuplicates"] = [];
   for (const p of plan.people.slice(0, 200)) {
@@ -138,7 +145,7 @@ export async function previewImport(text: string, districtId: string | null): Pr
         givenName: p.givenName,
         surname: p.surname,
         gender: p.gender,
-        birthGotraId: (p.gotra && gotras.get(p.gotra.trim().toLowerCase())) || null,
+        birthGotraId: gotraOf(gotras, p.birthGotra),
         districtId,
         nativeLocalityId: null,
         birthYear: p.birthDate ? Number(p.birthDate.slice(0, 4)) : null,
@@ -215,9 +222,18 @@ export async function runImport(user: SessionUser, text: string, districtId: str
   return { batch, people: created.length, firstId: created[0] };
 }
 
+const gotraOf = (gotras: Map<string, string>, name: string | null | undefined) => (name && gotras.get(name.trim().toLowerCase())) || null;
+
 function personRow(p: GedPerson, id: string, gotras: Map<string, string>, districtId: string | null, by: string) {
-  const gotraId = (p.gotra && gotras.get(p.gotra.trim().toLowerCase())) || null;
-  const notes = [p.gotra && !gotraId ? `Gotra in the imported file: ${p.gotra}` : null, p.deathPlace ? `Place of death: ${p.deathPlace}` : null].filter(Boolean).join("\n");
+  // The own gotra is derived (from the father, and for a married woman the husband); the file's
+  // value is used only until then
+  const birthGotraId = gotraOf(gotras, p.birthGotra);
+  const gotraId = gotraOf(gotras, p.gotra) ?? birthGotraId;
+  const maternalGotraId = gotraOf(gotras, p.maternalGotra);
+  const unknown = [p.gotra, p.birthGotra, p.maternalGotra].filter((g) => g && !gotraOf(gotras, g));
+  const notes = [unknown.length ? `Gotra in the imported file: ${[...new Set(unknown)].join(", ")}` : null, p.deathPlace ? `Place of death: ${p.deathPlace}` : null]
+    .filter(Boolean)
+    .join("\n");
   return {
     id,
     givenName: p.givenName.slice(0, 120),
@@ -230,8 +246,12 @@ function personRow(p: GedPerson, id: string, gotras: Map<string, string>, distri
     birthPlace: p.birthPlace?.slice(0, 200) ?? null,
     deathDate: p.isLiving ? null : (p.deathDate ?? null),
     occupation: p.occupation?.slice(0, 200) ?? null,
-    birthGotraId: gotraId,
+    birthGotraId,
     gotraId,
+    maternalGotraId,
+    nakshatra: p.nakshatra ?? null,
+    rasi: p.rasi ?? null,
+    ...(p.kuladevata ? { kuladevata: p.kuladevata.slice(0, 120) } : {}),
     districtId,
     notes: notes || null,
     createdById: by,

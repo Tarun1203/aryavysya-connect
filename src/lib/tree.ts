@@ -87,8 +87,14 @@ export type TreeNode = {
   memberNo?: number;
   givenNameLocal?: string | null;
   surnameLocal?: string | null;
-  gotra?: { name: string; nameTe: string | null; nameKn: string | null; nameTa: string | null } | null;
+  gotra?: GotraNames | null;
+  /** Birth (puttinti) and mother's gotras, for the tree's gotra switch */
+  birthGotra?: GotraNames | null;
+  maternalGotra?: GotraNames | null;
 };
+
+type GotraNames = { name: string; nameTe: string | null; nameKn: string | null; nameTa: string | null };
+const gotraSelect = { select: { name: true, nameTe: true, nameKn: true, nameTa: true } } as const;
 
 const nodeSelect = {
   id: true,
@@ -103,7 +109,9 @@ const nodeSelect = {
   memberNo: true,
   givenNameLocal: true,
   surnameLocal: true,
-  gotra: { select: { name: true, nameTe: true, nameKn: true, nameTa: true } },
+  gotra: gotraSelect,
+  birthGotra: gotraSelect,
+  maternalGotra: gotraSelect,
   photo: { select: { visible: true, updatedAt: true } },
 } as const;
 

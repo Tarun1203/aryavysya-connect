@@ -83,6 +83,7 @@ test("reading a typical file", () => {
   assert.equal(a.birthPlace, "Guntur");
   assert.equal(a.isLiving, false);
   assert.equal(a.gotra, "Kasyapasa");
+  assert.equal(a.birthGotra, "Kasyapasa", "a husband's own gotra is his birth gotra");
   assert.equal(b.isLiving, false, "1 DEAT Y means passed away");
   assert.equal(c.birthDate, "1952-03-14");
   assert.equal(c.isLiving, true);
@@ -122,7 +123,7 @@ test("plan: missing people, a third parent, loops and parent–spouse are left o
 
 test("write then read gives the same people and links back", () => {
   const people: GedPerson[] = [
-    { ...person("@I1@"), givenName: "Venkata Ramaiah", surname: "Kotha", givenNameLocal: "వెంకట", surnameLocal: "కోట", birthDate: "1890", isLiving: false, deathDate: "1960-05", gotra: "Kasyapasa", birthPlace: "Guntur" },
+    { ...person("@I1@"), givenName: "Venkata Ramaiah", surname: "Kotha", givenNameLocal: "వెంకట", surnameLocal: "కోట", birthDate: "1890", isLiving: false, deathDate: "1960-05", gotra: "Kasyapasa", birthGotra: "Kasyapasa", maternalGotra: "Vashishtasa", nakshatra: "Rohini", rasi: "Vrishabha", kuladevata: "Vasavi Kanyaka Parameswari", birthPlace: "Guntur" },
     { ...person("@I2@", "FEMALE"), givenName: "Lakshmamma", surname: "Kotha", isLiving: false },
     { ...person("@I3@"), givenName: "Ravi", surname: "Kotha", birthDate: "1952-03-14", occupation: "Teacher\nand writer – " + "x".repeat(300) },
     { ...person("@I4@", "FEMALE"), private: true, givenName: "Private", surname: "" },
@@ -143,7 +144,7 @@ test("write then read gives the same people and links back", () => {
   const lines = text.split(/\r\n/);
   assert.ok(lines.includes("1 HUSB @I1@") && lines.includes("1 FAMS @F1@") && !text.includes("@@"), "pointers are not escaped");
   const back = readGedcom(text, NOW);
-  for (const k of ["givenName", "surname", "givenNameLocal", "surnameLocal", "birthDate", "deathDate", "isLiving", "gotra", "birthPlace", "occupation"] as const) {
+  for (const k of ["givenName", "surname", "givenNameLocal", "surnameLocal", "birthDate", "deathDate", "isLiving", "gotra", "birthGotra", "maternalGotra", "nakshatra", "rasi", "kuladevata", "birthPlace", "occupation"] as const) {
     assert.deepEqual(back.people[0][k] ?? null, people[0][k] ?? null, k);
   }
   assert.equal(back.people[2].occupation, people[2].occupation);
@@ -160,4 +161,18 @@ test("generations: parents before their children", () => {
   const people = ["K", "P", "M", "G"].map((r) => person(r));
   const layers = generations({ people, parentLinks: [{ parent: "P", child: "K" }, { parent: "M", child: "K" }, { parent: "G", child: "P" }] });
   assert.deepEqual(layers, [["M", "G"], ["P"], ["K"]]);
+});
+
+test("community facts: a wife's own gotra is not her birth gotra; lists are checked", () => {
+  const r = readGedcom(
+    ["0 HEAD", "1 CHAR UTF-8", "0 @I1@ INDI", "1 NAME A /B/", "1 SEX M", "1 _GOTRA Kasyapasa", "0 @I2@ INDI", "1 NAME C /B/", "1 SEX F",
+     "1 _GOTRA Kasyapasa", "1 _NAKSHATRA rohini", "1 _RASI Unknownsign", "0 @F1@ FAM", "1 HUSB @I1@", "1 WIFE @I2@", "0 TRLR"].join("\n"),
+    NOW,
+  );
+  const wife = r.people[1];
+  assert.equal(wife.gotra, "Kasyapasa");
+  assert.equal(wife.birthGotra, null);
+  assert.equal(wife.nakshatra, "Rohini");
+  assert.equal(wife.rasi, null);
+  assert.ok(r.warnings.some((w) => w.includes("Unknownsign")));
 });

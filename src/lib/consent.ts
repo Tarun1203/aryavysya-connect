@@ -88,6 +88,8 @@ export function mask<T extends { id: string }>(p: T, label: string): T {
     deathDate: null,
     birthOrder: null,
     gotra: null,
+    birthGotra: null,
+    maternalGotra: null,
     photo: null,
     memberNo: undefined,
     private: true,

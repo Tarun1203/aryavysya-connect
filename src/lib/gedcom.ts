@@ -6,10 +6,13 @@
  * end, and the children. Everything else is skipped and counted, never guessed at. Writing produces
  * GEDCOM 5.5.1 in UTF-8, which every genealogy program reads.
  *
- * Our own facts travel in underscore tags, as the standard allows: _GOTRA (the birth gotra). A
- * name in Telugu, Kannada or Tamil script is a second NAME, so other programs show it as an
+ * Our own facts travel in underscore tags, as the standard allows: _GOTRA (own, swa gotra),
+ * _BIRTH_GOTRA (puttinti), _MATERNAL_GOTRA, _NAKSHATRA, _RASI and _KULADEVATA. The family name
+ * (intiperu) is the GEDCOM surname; the sankethanama comes with the gotra. A name in Telugu, Kannada or Tamil script is a second NAME, so other programs show it as an
  * alternate name and our import puts it back in the local-script fields.
  */
+
+import { NAKSHATRAS, RASIS } from "./constants";
 
 /** A problem with the file itself, worded for the person importing it. */
 export class GedcomError extends Error {}
@@ -29,7 +32,14 @@ export type GedPerson = {
   deathDate?: string | null;
   deathPlace?: string | null;
   isLiving: boolean;
+  /** Own (swa) gotra: a married woman's is her husband's */
   gotra?: string | null;
+  /** Birth (puttinti) gotra, the father's; never changes with marriage */
+  birthGotra?: string | null;
+  maternalGotra?: string | null;
+  nakshatra?: string | null;
+  rasi?: string | null;
+  kuladevata?: string | null;
   occupation?: string | null;
   /** Written as a placeholder: no name, dates or facts (src/lib/consent.ts) */
   private?: boolean;
@@ -180,6 +190,16 @@ export function readGedcom(text: string, now = new Date()): ReadResult {
   const warn = (msg: string) => {
     if (warnings.length < 200) warnings.push(msg);
   };
+  // Wives in the file: a married woman's own gotra is her husband's, so without _BIRTH_GOTRA it
+  // can't stand in for her birth gotra
+  const wives = new Set(roots.filter((r) => r.tag === "FAM").flatMap((r) => r.children.filter((c) => c.tag === "WIFE").map((c) => c.value.trim())));
+  /** A value from a fixed list (nakshatras, rasis), matched without case; anything else is reported */
+  const fromList = (label: string, tag: string, value: string | undefined, list: readonly string[]) => {
+    if (!value) return null;
+    const hit = list.find((x) => x.toLowerCase() === value.toLowerCase().replace(/\s+/g, " "));
+    if (!hit) warn(`${label}: ${tag.slice(1).toLowerCase()} "${value}" is not in our list – left out`);
+    return hit ?? null;
+  };
 
   for (const r of roots) {
     if (r.tag === "INDI" && r.xref) {
@@ -215,6 +235,11 @@ export function readGedcom(text: string, now = new Date()): ReadResult {
         deathPlace: childValue(death, "PLAC") ?? null,
         isLiving,
         gotra: childValue(r, "_GOTRA") ?? null,
+        birthGotra: childValue(r, "_BIRTH_GOTRA") ?? (wives.has(r.xref) ? null : (childValue(r, "_GOTRA") ?? null)),
+        maternalGotra: childValue(r, "_MATERNAL_GOTRA") ?? null,
+        nakshatra: fromList(label, "_NAKSHATRA", childValue(r, "_NAKSHATRA"), NAKSHATRAS),
+        rasi: fromList(label, "_RASI", childValue(r, "_RASI"), RASIS),
+        kuladevata: childValue(r, "_KULADEVATA") ?? null,
         occupation: childValue(r, "OCCU") ?? null,
       });
     } else if (r.tag === "FAM" && r.xref) {
@@ -421,7 +446,8 @@ export function writeGedcom(data: GedData, meta: { source: string; version: stri
         out.push(...line(1, "DEAT", death || p.deathPlace ? null : "Y"), ...(death ? line(2, "DATE", death) : []), ...(p.deathPlace ? line(2, "PLAC", p.deathPlace) : []));
       }
       if (p.occupation) out.push(...line(1, "OCCU", p.occupation));
-      if (p.gotra) out.push(...line(1, "_GOTRA", p.gotra));
+      const facts = [["_GOTRA", p.gotra], ["_BIRTH_GOTRA", p.birthGotra], ["_MATERNAL_GOTRA", p.maternalGotra], ["_NAKSHATRA", p.nakshatra], ["_RASI", p.rasi], ["_KULADEVATA", p.kuladevata]] as const;
+      for (const [tag, value] of facts) if (value) out.push(...line(1, tag, value));
     }
     for (const f of famcOf.get(p.ref) ?? []) out.push(...pointer(1, "FAMC", f));
     for (const f of famsOf.get(p.ref) ?? []) out.push(...pointer(1, "FAMS", f));
