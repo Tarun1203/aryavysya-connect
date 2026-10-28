@@ -80,6 +80,8 @@ export type TreeNode = {
   isLiving: boolean;
   /** Only whether there is a shown photo and when it changed – never the image itself */
   photo?: { visible: boolean; updatedAt: Date } | null;
+  /** Shown as "Private" to this viewer: no name, dates, gotra, photo or link (src/lib/consent.ts) */
+  private?: boolean;
   status?: string;
   memberNo?: number;
   givenNameLocal?: string | null;

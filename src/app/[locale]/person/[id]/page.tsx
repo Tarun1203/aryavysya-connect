@@ -9,6 +9,9 @@ import { fullName, gotraLabel, kulaLabels, lifeSpan, memberCode, personState } f
 import { mergePersonAction, removeLinkAction } from "@/app/actions/person";
 import { ActionForm } from "@/components/ActionForm";
 import { PersonPicker } from "@/components/PersonPicker";
+import { PrivateNotice } from "@/components/PrivateNotice";
+import { consentPanel, isPrivateFor, maskList } from "@/lib/consent";
+import { ConsentCard } from "@/components/ConsentCard";
 import { respondMarriageAction, updateMarriageAction } from "@/app/actions/marriage";
 import Image from "next/image";
 import { Badge, buttonClass, Card, Notice } from "@/components/ui";
@@ -27,8 +30,22 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
   // A merged-away record keeps its id and points to the surviving one
   if (family.person.status === "MERGED" && family.person.mergedIntoId) redirect({ href: `/person/${family.person.mergedIntoId}`, locale });
   const t = await getTranslations("person");
+  const tc = await getTranslations("consent");
+  if (await isPrivateFor(user, id)) return <PrivateNotice title={tc("privateTitle")} body={tc("privateBody")} />;
   const format = await getFormatter();
-  const { person, parents, spouses, children, siblings, proposals, childNo } = family;
+  const { person, proposals, childNo } = family;
+  // Relatives who are private to this viewer show as "Private", with no link
+  const privateLabel = tc("privateLabel");
+  const maskLinks = async <L extends { person: Parameters<typeof maskList>[0][number] }>(links: L[]) => {
+    const shown = await maskList(links.map((l) => l.person), user, privateLabel);
+    return links.map((l, i) => ({ ...l, person: shown[i] as L["person"] }));
+  };
+  const [parents, spouses, children, siblings] = await Promise.all([
+    maskLinks(family.parents),
+    maskLinks(family.spouses),
+    maskLinks(family.children),
+    maskList(family.siblings, user, privateLabel),
+  ]);
   const tm = await getTranslations("marriage");
   const tmerge = await getTranslations("merge");
   const marriedWoman = person.gender === "FEMALE" && spouses.some((s) => s.person.gender === "MALE");
@@ -40,6 +57,9 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
     canAddRelative(user, id, "spouse"),
     photoRights(user, id),
   ]);
+  const consent = person.isLiving ? await consentPanel(user, id) : null;
+  const self = person.user?.id === user.id;
+  const showConsent = !!consent && (editable || consent.canGiveAsGuardian || consent.canRecordForm || consent.canGiveSelf || consent.canWithdraw);
   const tp = await getTranslations("photo");
   const showPhoto = !!person.photo && (person.photo.visible || photo.seeHidden);
   const consentLabel = tp(photo.reason === "guardian" ? "consentGuardian" : photo.reason === "self" ? "consentSelf" : "consentFamily");
@@ -68,6 +88,9 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
 
   const PersonLink = ({ p, linkId, kind, no }: { p: P; linkId?: string; kind?: "parentChild" | "couple"; no?: string }) => (
     <li className="flex items-center justify-between gap-2 rounded-xl border border-line px-3 py-2">
+      {(p as { private?: boolean }).private ? (
+        <span className="text-sm italic text-muted">{p.givenName}</span>
+      ) : (
       <Link href={`/person/${p.id}`} className="flex items-baseline gap-2 hover:text-brand">
         {no && <span className="shrink-0 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand">{no}</span>}
         <span className="font-medium">{fullName(p)}</span>
@@ -75,6 +98,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
           {[lifeSpan(p), gotraLabel(p.gotra, locale)].filter(Boolean).join(" · ")}
         </span>
       </Link>
+      )}
       {editable && linkId && kind && (
         <form action={removeLinkAction.bind(null, kind, linkId, id)}>
           <button className="text-xs text-muted hover:text-bad" title={t("removeLink")} aria-label={t("removeLink")}>
@@ -283,6 +307,10 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
           )}
         </Card>
       </div>
+
+      {showConsent && consent && (
+        <ConsentCard personId={id} name={fullName(person)} panel={consent} showHistory={isAdmin(user) || self || consent.canGiveAsGuardian} />
+      )}
 
       {isAdmin(user) && editable && (
         <Card>

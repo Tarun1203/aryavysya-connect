@@ -21,6 +21,8 @@ import { buttonClass, Card, PageTitle } from "@/components/ui";
 import { PictorialTree } from "@/components/PictorialTree";
 import { TreeViewport } from "@/components/TreeViewport";
 import { Segmented } from "@/components/Segmented";
+import { PrivateNotice } from "@/components/PrivateNotice";
+import { isPrivateFor, maskList, maskTree } from "@/lib/consent";
 import { HierarchyTree } from "@/components/HierarchyTree";
 import { PrintButton } from "@/components/PrintButton";
 
@@ -32,6 +34,10 @@ export default async function TreePage({
   const { view } = (await searchParams) as { view?: string };
   setRequestLocale(locale);
   const user = await requireViewer(locale);
+  const tc = await getTranslations("consent");
+  // A minor without guardian consent (or anyone who withdrew it) is private outside the family
+  if (await isPrivateFor(user, id)) return <PrivateNotice title={tc("privateTitle")} body={tc("privateBody")} />;
+  const privateLabel = tc("privateLabel");
   const t = await getTranslations("tree");
   const VIEWS = ["hierarchy", "picture", "list", "chart"] as const;
   const current = (VIEWS as readonly string[]).includes(view ?? "") ? (view as (typeof VIEWS)[number]) : "hierarchy";
@@ -53,7 +59,8 @@ export default async function TreePage({
   if (current !== "chart") {
     // The whole lineage: from the eldest known ancestor of this person up to three generations past them
     const { rootId, path } = await lineageRoot(id, 8);
-    const root = await descendants(rootId, Math.min(10, path.length + 2));
+    const found = await descendants(rootId, Math.min(10, path.length + 2));
+    const root = found && (await maskTree(found, user, privateLabel));
     if (!root) notFound();
     const person = path.length > 1 ? (await pedigree(id, 1))[0][0] : root;
     const tp = await getTranslations("person");
@@ -75,12 +82,16 @@ export default async function TreePage({
       const cells = (p: TreeNode, focus: boolean, tag?: string) => [
         <td key="name" className="p-2">
           {tag && <span className="mr-2 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand">{tag}</span>}
-          <Link
-            href={`/person/${p.id}`}
-            className={`hover:text-brand ${focus ? "font-bold text-brand" : "font-medium"}`}
-          >
-            {fullName(p)}
-          </Link>
+          {p.private ? (
+            <span className="italic text-muted">{p.givenName}</span>
+          ) : (
+            <Link
+              href={`/person/${p.id}`}
+              className={`hover:text-brand ${focus ? "font-bold text-brand" : "font-medium"}`}
+            >
+              {fullName(p)}
+            </Link>
+          )}
           {(p.givenNameLocal || p.surnameLocal) && (
             <div className="text-xs text-muted">
               {[p.givenNameLocal, p.surnameLocal].filter(Boolean).join(" ")}
@@ -219,11 +230,18 @@ export default async function TreePage({
     editableIds(user),
   ]);
   if (!rows[0][0] || !desc) notFound();
+  // Mask private people in the ancestor rows and the descendants
+  const known = rows.flat().filter((p): p is TreeNode => !!p);
+  const masked = new Map((await maskList(known, user, privateLabel)).map((p) => [p.id, p]));
+  rows.forEach((row, g) => row.forEach((p, i) => p && (rows[g][i] = masked.get(p.id))));
+  const descendantsShown = await maskTree(desc, user, privateLabel);
   const canEdit = (pid: string) => editable === null || editable.has(pid);
 
   const Box = ({ p }: { p: TreeNode | null | undefined }) =>
     p === undefined ? (
       <div aria-hidden className="h-[54px]" />
+    ) : p?.private ? (
+      <div className="rounded-xl border border-dashed border-line px-3 py-2 text-sm italic text-muted">{p.givenName}</div>
     ) : p ? (
       <Link
         href={`/person/${p.id}`}
@@ -294,7 +312,7 @@ export default async function TreePage({
       <Card className="overflow-x-auto">
         <h2 className="mb-4 font-semibold">{t("descendants")}</h2>
         <ul className="min-w-max">
-          <Descendant node={desc} />
+          <Descendant node={descendantsShown} />
         </ul>
       </Card>
     </div>

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { canView } from "@/lib/permissions";
 import { photoRights } from "@/lib/photo";
+import { isPrivateFor } from "@/lib/consent";
 
 /**
  * A person's photo, for verified members only. A hidden photo is served only to those who manage
@@ -15,6 +16,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   const photo = await db.personPhoto.findUnique({ where: { personId: id } });
   if (!photo) return new NextResponse(null, { status: 404 });
   if (!photo.visible && !(await photoRights(user, id)).seeHidden) return new NextResponse(null, { status: 404 });
+  // A private person's photo is served only to their family and administrators
+  if (await isPrivateFor(user, id)) return new NextResponse(null, { status: 404 });
   return new NextResponse(new Uint8Array(photo.data), {
     headers: {
       "Content-Type": photo.mime,

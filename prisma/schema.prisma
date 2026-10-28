@@ -53,6 +53,28 @@ enum MarriageStatus {
   DIVORCED
 }
 
+/// What a person's data is used for (DPDP Act 2023: consent is per purpose)
+enum ConsentPurpose {
+  /// Processing the member's own details to verify and keep their membership
+  MEMBERSHIP
+  /// Showing the person in the family trees and search to verified members
+  FAMILY_TREE
+  /// Showing their photo
+  PHOTO
+}
+
+/// On whose authority consent was given
+enum ConsentBasis {
+  /// The person themselves
+  SELF
+  /// A parent, as guardian of a minor, through their own verified account
+  GUARDIAN
+  /// A signed paper form, seen and recorded by an administrator
+  OFFLINE_FORM
+  /// A family member confirmed the (adult, unregistered) person agreed – used for photos
+  FAMILY
+}
+
 enum RuleLevel {
   ALLOW // not checked
   WARN // shown; the member must confirm, and the confirmation is audited
@@ -230,6 +252,9 @@ model User {
   audit              AuditLog[]
   marriagesProposed  Couple[]      @relation("MarriageProposer")
   marriagesConfirmed Couple[]      @relation("MarriageConfirmer")
+  consents           Consent[]     @relation("ConsentSubject")
+  consentsGiven      Consent[]     @relation("ConsentGiver")
+  consentsWithdrawn  Consent[]     @relation("ConsentWithdrawer")
 }
 
 /// A member's request to be verified as belonging to a family.
@@ -344,6 +369,7 @@ model Person {
   user     User?         @relation("UserSelf")
   photo    PersonPhoto?
   claims   FamilyClaim[]
+  consents Consent[]
 
   @@index([surname, givenName])
   @@index([gotraId])
@@ -434,4 +460,36 @@ model PersonPhoto {
   /// When the uploader confirmed they have the person's (or, for a minor, the guardian's) consent
   consentAt    DateTime
   updatedAt    DateTime @updatedAt
+}
+
+/**
+ * A consent record (DPDP Act 2023): whose data, for what purpose, on what basis, given by whom and
+ * against which notice wording, and when. Records are never edited: withdrawing sets withdrawnAt,
+ * and giving consent again adds a new record. See src/lib/consent.ts.
+ */
+model Consent {
+  id               String         @id @default(cuid())
+  purpose          ConsentPurpose
+  basis            ConsentBasis
+  /// The person the data is about; empty only while a registration is still waiting for approval
+  personId         String?
+  person           Person?        @relation(fields: [personId], references: [id], onDelete: Cascade)
+  /// The account of the person the data is about, for consent given at registration
+  userId           String?
+  user             User?          @relation("ConsentSubject", fields: [userId], references: [id], onDelete: Cascade)
+  /// Who gave it: the person, the parent, or the administrator who recorded a paper form
+  givenById        String?
+  givenBy          User?          @relation("ConsentGiver", fields: [givenById], references: [id], onDelete: SetNull)
+  /// For a guardian or a paper form: the guardian's name and relationship to the person
+  guardianName     String?
+  guardianRelation String?
+  /// Which wording of the consent notice was agreed to (CONSENT_NOTICE_VERSION)
+  noticeVersion    String
+  givenAt          DateTime       @default(now())
+  withdrawnAt      DateTime?
+  withdrawnById    String?
+  withdrawnBy      User?          @relation("ConsentWithdrawer", fields: [withdrawnById], references: [id], onDelete: SetNull)
+
+  @@index([personId, purpose])
+  @@index([userId])
 }

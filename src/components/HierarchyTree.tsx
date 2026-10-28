@@ -29,7 +29,16 @@ export function HierarchyTree({
 }) {
   const onPath = new Set(path);
 
-  const person = (p: TreeNode, focus: boolean) => (
+  const person = (p: TreeNode, focus: boolean) =>
+    p.private ? (
+      // Private to this viewer: a placeholder in its place, nothing to open
+      <span className="flex min-w-0 items-center gap-2.5 rounded-xl p-1 pr-2">
+        <span className="grid size-10 shrink-0 place-items-center rounded-full border-2 border-dashed border-line bg-surface-2">
+          <Image src="/icons/3d/lock.png" alt="" width={28} height={28} loading="eager" className="size-6" />
+        </span>
+        <span className="text-sm italic text-muted">{p.givenName}</span>
+      </span>
+    ) : (
     <a href={href(p.id)} className="group flex min-w-0 items-center gap-2.5 rounded-xl p-1 pr-2 transition hover:bg-brand-soft/60">
       <span
         className={`grid size-10 shrink-0 place-items-center overflow-hidden rounded-full border-2 bg-surface-2 ${
@@ -52,7 +61,7 @@ export function HierarchyTree({
         </span>
       </span>
     </a>
-  );
+    );
 
   // `no` is the child no. among the parents' children (siblings are already in order)
   const branch = (n: DescendantNode, gen: number, no?: number) => {

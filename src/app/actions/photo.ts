@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { audit } from "@/lib/permissions";
 import { photoRights } from "@/lib/photo";
+import { recordConsent, withdrawConsent } from "@/lib/consent";
 import type { FormState } from "@/lib/forms";
 
 const MAX_BYTES = 300 * 1024; // the browser sends a 320px JPEG of about 20–40 KB
@@ -35,6 +36,14 @@ export async function uploadPhotoAction(personId: string, _: FormState, fd: Form
     update: { data, mime, visible, uploadedById: user!.id, consentAt: new Date() },
     create: { personId, data, mime, visible, uploadedById: user!.id, consentAt: new Date() },
   });
+  // A new photo replaces the consent for the old one
+  await withdrawConsent(personId, "PHOTO", user!.id);
+  await recordConsent({
+    purpose: "PHOTO",
+    basis: rights.reason === "guardian" ? "GUARDIAN" : rights.reason === "self" ? "SELF" : "FAMILY",
+    personId,
+    givenById: user!.id,
+  });
   await audit(user, "upload-photo", "Person", personId, { visible, consent: rights.reason });
   revalidatePath("/", "layout");
   return { ok: true };
@@ -52,6 +61,7 @@ export async function removePhotoAction(personId: string) {
   const user = await currentUser();
   if (!(await photoRights(user, personId)).remove) return;
   await db.personPhoto.deleteMany({ where: { personId } });
+  await withdrawConsent(personId, "PHOTO", user!.id);
   await audit(user, "remove-photo", "Person", personId);
   revalidatePath("/", "layout");
 }

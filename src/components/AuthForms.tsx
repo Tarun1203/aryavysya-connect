@@ -110,6 +110,20 @@ export function RegisterForm({
           </Field>
         </div>
       </Card>
+      {/* DPDP Act 2023: consent per purpose, each ticked on its own */}
+      <Card className="flex flex-col gap-3 text-sm">
+        <h2 className="font-semibold">{t("consent.registrationTitle")}</h2>
+        <p className="text-muted">{t("consent.registrationNotice")}</p>
+        <label className="flex items-start gap-2">
+          <input type="checkbox" name="consentMembership" required className="mt-0.5 size-4 accent-brand" />
+          <span>{t("consent.agreeMembership")}</span>
+        </label>
+        <label className="flex items-start gap-2">
+          <input type="checkbox" name="consentTree" required className="mt-0.5 size-4 accent-brand" />
+          <span>{t("consent.agreeTree")}</span>
+        </label>
+        <p className="text-xs text-muted">{t("consent.withdrawHint")}</p>
+      </Card>
       <Button disabled={pending} className="self-start">
         {t("auth.createAccount")}
       </Button>

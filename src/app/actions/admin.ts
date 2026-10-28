@@ -8,6 +8,7 @@ import { adminScope, audit, claimRights, districtWhere } from "@/lib/permissions
 import { str, type FormState } from "@/lib/forms";
 import { validLocality, validTaluk } from "@/lib/locations/resolve";
 import { syncGotras } from "@/lib/gotra";
+import { attachUserConsents } from "@/lib/consent";
 import type { OrgLevel, Role } from "@/generated/prisma/client";
 
 async function admin() {
@@ -88,6 +89,7 @@ export async function approveClaimAction(claimId: string, _: FormState, fd: Form
       },
     }),
   ]);
+  await attachUserConsents(claim.userId, personId);
   await audit(u, "approve", "FamilyClaim", claimId, { personId, mode });
   return done();
 }

@@ -3,10 +3,12 @@ import { db } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { canView } from "@/lib/permissions";
 import { lifeSpan } from "@/lib/reference";
+import { privateIds, privateViewer } from "@/lib/consent";
 
 /** Name autocomplete for the person pickers (verified members only). */
 export async function GET(req: NextRequest) {
-  if (!canView(await currentUser())) return NextResponse.json([], { status: 401 });
+  const user = await currentUser();
+  if (!canView(user)) return NextResponse.json([], { status: 401 });
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (q.length < 2) return NextResponse.json([]);
   const words = q.split(/\s+/).slice(0, 3);
@@ -27,8 +29,9 @@ export async function GET(req: NextRequest) {
     take: 15,
     orderBy: [{ surname: "asc" }, { givenName: "asc" }],
   });
+  const [hidden, sees] = await Promise.all([privateIds(people), privateViewer(user)]);
   return NextResponse.json(
-    people.map((p) => ({
+    people.filter((p) => !hidden.has(p.id) || sees(p.id)).map((p) => ({
       id: p.id,
       label: `${p.givenName} ${p.surname}`,
       detail: [lifeSpan(p), p.gotra?.name, p.nativePlace].filter(Boolean).join(" · "),

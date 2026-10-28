@@ -8,6 +8,7 @@ import { pickerDefaults } from "@/lib/locations/resolve";
 import { LocationPicker } from "@/components/LocationPicker";
 import { GotraSelect } from "@/components/GotraSelect";
 import { Button, Card, Field, Input, PageTitle } from "@/components/ui";
+import { privateIds, privateViewer } from "@/lib/consent";
 
 type Search = {
   q?: string;
@@ -37,7 +38,7 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
   const { locale } = await params;
   const sp = (await searchParams) as Search;
   setRequestLocale(locale);
-  await requireViewer(locale);
+  const user = await requireViewer(locale);
   const t = await getTranslations("search");
   const tp = await getTranslations("person");
   const [gotras, saved] = await Promise.all([gotraOptions(locale), pickerDefaults(sp.localityId, sp.districtId)]);
@@ -46,7 +47,7 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
   const words = (sp.q ?? "").trim().split(/\s+/).filter(Boolean).slice(0, 4);
   const searched =
     words.length > 0 || !!sp.gotra || !!sp.place || !!sp.state || !!sp.districtId || !!sp.talukId || !!sp.localityId || (sp.pin?.length ?? 0) === 6;
-  const people = searched
+  const found = searched
     ? await db.person.findMany({
         where: {
           AND: [
@@ -68,6 +69,10 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
         take: 100,
       })
     : [];
+
+  // Private people (minors without guardian consent, withdrawn consent) are found only by their family
+  const [hidden, sees] = await Promise.all([privateIds(found), privateViewer(user)]);
+  const people = found.filter((p) => !hidden.has(p.id) || sees(p.id));
 
   return (
     <div className="flex flex-col gap-6">

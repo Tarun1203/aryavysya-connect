@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { endSession, hashPassword, startSession, verifyPassword } from "@/lib/auth";
 import { gender, str, type FormState } from "@/lib/forms";
 import { validLocality } from "@/lib/locations/resolve";
+import { recordConsent } from "@/lib/consent";
 
 export async function loginAction(_: FormState, fd: FormData): Promise<FormState> {
   const t = await getTranslations("auth");
@@ -55,6 +56,8 @@ export async function registerAction(_: FormState, fd: FormData): Promise<FormSt
   });
   if (!parsed.success) return { error: t("errors.required") };
   const d = parsed.data;
+  // DPDP: membership and family-tree consent, each ticked separately
+  if (fd.get("consentMembership") !== "on" || fd.get("consentTree") !== "on") return { error: t("consent.requiredAtRegistration") };
   if (await db.user.findUnique({ where: { email: d.email } })) return { error: t("auth.emailTaken") };
   // Only accept a local body that really belongs to the chosen district
   const orgId = str(fd, "organizationId");
@@ -88,6 +91,9 @@ export async function registerAction(_: FormState, fd: FormData): Promise<FormSt
       },
     },
   });
+  for (const purpose of ["MEMBERSHIP", "FAMILY_TREE"] as const) {
+    await recordConsent({ purpose, basis: "SELF", userId: user.id, givenById: user.id });
+  }
   await startSession(user.id);
   redirect({ href: "/account", locale });
 }

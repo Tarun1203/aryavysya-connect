@@ -13,6 +13,7 @@ import { findDuplicates } from "@/lib/dedup";
 import { marriageCheck } from "@/lib/marriage";
 import { rulesFor, syncAround } from "@/lib/gotra";
 import { mergePeople, mergeProblem } from "@/lib/merge";
+import { privateIds, privateViewer } from "@/lib/consent";
 
 export async function updatePersonAction(personId: string, _: FormState, fd: FormData): Promise<FormState> {
   const t = await getTranslations();
@@ -61,7 +62,13 @@ export async function addRelativeAction(anchorId: string, relation: Relation, _:
             ? { parentIds: [anchorId, ...(coParentId ? [coParentId] : [])] }
             : { spouseIds: [anchorId] },
     });
-    if (duplicates.length) return { duplicates };
+    if (duplicates.length) {
+      // A private match still warns, but without its name or details
+      const people = await db.person.findMany({ where: { id: { in: duplicates.map((d) => d.id) } }, select: { id: true, isLiving: true, birthDate: true } });
+      const [hidden, sees] = await Promise.all([privateIds(people), privateViewer(user)]);
+      const label = t("consent.privateLabel");
+      return { duplicates: duplicates.map((d) => (hidden.has(d.id) && !sees(d.id) ? { ...d, name: label, detail: "", code: "" } : d)) };
+    }
   }
   // A brand-new spouse has no ancestors in the tree yet, so only the gotras can be checked
   if (relation === "spouse" && fd.get("confirmMatch") !== "yes") {
