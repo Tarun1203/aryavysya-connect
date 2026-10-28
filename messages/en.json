@@ -140,7 +140,7 @@
     "matchWarning": "Marriage check: {verdict}",
     "removeLink": "Remove link",
     "kulas": "Clan names",
-    "findGotra": "Type a gotra or kula name to find it",
+    "findGotra": "Type a gotra or kula (sankethanama) name to find it",
     "noGotraMatch": "No gotra or kula name matches",
     "aliases": "Other names",
     "aliasesHint": "Birth name, married name or other spellings, separated by commas",
@@ -171,7 +171,10 @@
     "link_self": "A person can't be their own parent.",
     "link_twoParents": "This child already has two parents recorded.",
     "link_cycle": "That would make someone their own ancestor: the child is already above this person in the tree.",
-    "link_spouse": "They are recorded as married, so one can't be the other's parent."
+    "link_spouse": "They are recorded as married, so one can't be the other's parent.",
+    "kulaMatches": "Kula found:",
+    "kulaDidYouMean": "Did you mean:",
+    "kulaSuggestion": "{kula} → {gotra}"
   },
   "tree": {
     "title": "Family tree of {name}",

@@ -2,7 +2,8 @@ import "server-only";
 import { db } from "@/lib/db";
 
 export type Option = { id: string; label: string };
-export type GotraOption = Option & { kulas: string[] };
+/** `kulas`: labels in the viewer's script; `kulaSpellings`: every spelling of each kula, for the kula lookup (src/lib/kula.ts) */
+export type GotraOption = Option & { kulas: string[]; kulaSpellings: { kula: string; local: string[] }[] };
 
 type GotraNames = { name: string; nameTe: string | null; nameKn: string | null; nameTa: string | null };
 
@@ -27,7 +28,15 @@ export function kulaLabels(g: { kulas: string[]; kulaNames: unknown }, locale: s
 /** Gotras in the master list order, with their kula names (sankethanamams) – in both scripts, so either can be typed to find one. */
 export async function gotraOptions(locale: string): Promise<GotraOption[]> {
   const gotras = await db.gotra.findMany({ orderBy: [{ no: { sort: "asc", nulls: "last" } }, { name: "asc" }] });
-  return gotras.map((g) => ({ id: g.id, label: gotraLabel(g, locale)!, kulas: kulaLabels(g, locale) }));
+  return gotras.map((g) => {
+    const local = (g.kulaNames ?? {}) as KulaScripts;
+    return {
+      id: g.id,
+      label: gotraLabel(g, locale)!,
+      kulas: kulaLabels(g, locale),
+      kulaSpellings: g.kulas.map((k) => ({ kula: k, local: [local[k]?.te, local[k]?.kn, local[k]?.ta].filter((x): x is string => !!x) })),
+    };
+  });
 }
 
 export async function districtOptions(): Promise<Option[]> {
