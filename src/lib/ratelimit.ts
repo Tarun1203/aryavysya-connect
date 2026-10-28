@@ -36,6 +36,8 @@ export const RULES = {
   // Registration: per IP, and in all
   registerIp: { name: "register:ip", limit: 5, windowSec: HOUR, backoff: { baseSec: HOUR, maxSec: DAY, decaySec: DAY } },
   registerGlobal: { name: "register:all", limit: 200, windowSec: HOUR },
+  // Family-tree downloads per account (a whole lineage each – generous for a family, not a scraper)
+  gedcomExport: { name: "gedcom:export", limit: 20, windowSec: HOUR, backoff: steady },
 } satisfies Record<string, Rule>;
 
 function keyFor(rule: Rule, subject: string) {

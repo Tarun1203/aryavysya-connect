@@ -52,7 +52,13 @@ export default async function TreePage({
           active: current === v,
         }))}
       />
-      <PrintButton label={t("print")} className={buttonClass("ghost")} />
+      <div className="flex gap-2">
+        {/* A file download, not a page: a plain link to the route handler */}
+        <a href={`/api/gedcom/${id}?locale=${locale}`} download className={buttonClass("ghost")} title={t("gedcomHint")}>
+          {t("gedcom")}
+        </a>
+        <PrintButton label={t("print")} className={buttonClass("ghost")} />
+      </div>
     </div>
   );
 
