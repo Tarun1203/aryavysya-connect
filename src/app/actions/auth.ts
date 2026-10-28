@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { db } from "@/lib/db";
-import { endSession, hashPassword, startSession, verifyPassword } from "@/lib/auth";
+import { endSession, hashPassword, needsRehash, startSession, verifyPassword } from "@/lib/auth";
 import { gender, str, type FormState } from "@/lib/forms";
 import { validLocality } from "@/lib/locations/resolve";
 import { recordConsent } from "@/lib/consent";
@@ -36,6 +36,8 @@ export async function loginAction(_: FormState, fd: FormData): Promise<FormState
     return { error: t("invalid") };
   }
   await clear(RULES.loginAccount, email);
+  // An older hash (bcrypt, or weaker argon2 settings) is replaced now that we have the password
+  if (needsRehash(user.passwordHash)) await db.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(password) } });
   await startSession(user.id);
   redirect({ href: "/", locale: await getLocale() });
 }

@@ -1,5 +1,5 @@
 import "dotenv/config";
-import bcrypt from "bcryptjs";
+import { hashPassword } from "../src/lib/password";
 import { db } from "../src/lib/db";
 import { GOTRAS, RENAMED_GOTRAS } from "./data/gotras";
 import { DISTRICTS } from "./data/districts";
@@ -60,7 +60,7 @@ async function seedSuperAdmin() {
     create: {
       email,
       name: "Platform Super Admin",
-      passwordHash: await bcrypt.hash(password, 10),
+      passwordHash: await hashPassword(password),
       role: "SUPER_ADMIN",
       status: "APPROVED",
     },
@@ -132,7 +132,7 @@ async function seedDemo() {
     },
   });
 
-  const hash = await bcrypt.hash(password, 10);
+  const hash = await hashPassword(password);
   const demoUser = (email: string, name: string, extra: object) =>
     db.user.create({ data: { email, name, passwordHash: hash, status: "APPROVED", districtId: guntur.id, approvedAt: new Date(), ...extra } });
 
