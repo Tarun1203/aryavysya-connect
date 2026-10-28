@@ -644,3 +644,20 @@ model Grievance {
   @@index([status, dueAt])
   @@index([ipHash, createdAt])
 }
+
+/**
+ * Counters for rate limiting (src/lib/ratelimit.ts): one row per limited key, counted in fixed
+ * windows, with progressive blocking after repeated violations. The key is an HMAC of the rule
+ * and the subject, so no phone number, email or IP address is stored here.
+ */
+model RateLimit {
+  key          String    @id
+  points       Int       @default(0)
+  windowEndsAt DateTime
+  /// Times the limit was exceeded recently; each one doubles the next block
+  strikes      Int       @default(0)
+  blockedUntil DateTime?
+  updatedAt    DateTime  @default(now()) @updatedAt
+
+  @@index([updatedAt])
+}

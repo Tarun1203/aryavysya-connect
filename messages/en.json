@@ -81,7 +81,9 @@
     "localOrg": "Local sangha / sabha",
     "localOrgHint": "Optional – they endorse you first",
     "localOrgNone": "Not a member of a local body",
-    "under18": "You must be 18 or over to register. Children are added to the family tree by their parents."
+    "under18": "You must be 18 or over to register. Children are added to the family tree by their parents.",
+    "tooManyAttempts": "Too many sign-in attempts. Please try again in {minutes} minutes.",
+    "tooManyRegistrations": "Too many registrations from here just now. Please try again in {minutes} minutes."
   },
   "person": {
     "givenName": "Given name",
