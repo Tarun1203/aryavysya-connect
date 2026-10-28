@@ -9,13 +9,33 @@ import { gender, str, type FormState } from "@/lib/forms";
 import { validLocality } from "@/lib/locations/resolve";
 import { recordConsent } from "@/lib/consent";
 import { normalizePhone } from "@/lib/otp";
+import { clientIp } from "@/lib/ip";
+import { blocked, clear, hit, hitAll, RULES } from "@/lib/ratelimit";
+import { worst } from "@/lib/ratelimit-core";
 
+// Checked against when the email is unknown, so a wrong email takes as long as a wrong password
+let decoyHash: Promise<string> | undefined;
+const decoy = () => (decoyHash ??= hashPassword("decoy-password-never-used"));
+const minutes = (sec: number) => Math.max(1, Math.ceil(sec / 60));
+
+/**
+ * Password sign-in. Limited per IP (all attempts) and per account (failures, cleared on success),
+ * with growing blocks; the same answer and timing whether or not the email is registered.
+ */
 export async function loginAction(_: FormState, fd: FormData): Promise<FormState> {
   const t = await getTranslations("auth");
-  const email = str(fd, "email")?.toLowerCase();
+  const email = str(fd, "email")?.toLowerCase() ?? "";
   const password = str(fd, "password");
+  const ip = await clientIp();
+  const limited = worst([await hit(RULES.loginIp, ip), await blocked(RULES.loginAccount, email)]);
+  if (!limited.ok) return { error: t("tooManyAttempts", { minutes: minutes(limited.retryAfterSec) }) };
   const user = email ? await db.user.findUnique({ where: { email } }) : null;
-  if (!user || !password || !(await verifyPassword(password, user.passwordHash))) return { error: t("invalid") };
+  const good = await verifyPassword(password ?? "", user?.passwordHash ?? (await decoy()));
+  if (!user || !password || !good) {
+    await hit(RULES.loginAccount, email);
+    return { error: t("invalid") };
+  }
+  await clear(RULES.loginAccount, email);
   await startSession(user.id);
   redirect({ href: "/", locale: await getLocale() });
 }
@@ -57,6 +77,11 @@ export async function registerAction(_: FormState, fd: FormData): Promise<FormSt
   });
   if (!parsed.success) return { error: t("errors.required") };
   const d = parsed.data;
+  const regLimit = await hitAll([
+    [RULES.registerIp, await clientIp()],
+    [RULES.registerGlobal, "all"],
+  ]);
+  if (!regLimit.ok) return { error: t("auth.tooManyRegistrations", { minutes: minutes(regLimit.retryAfterSec) }) };
   // Only adults register; children are in the tree under their parents (terms, child safety)
   if (d.birthYear && new Date().getFullYear() - d.birthYear < 18) return { error: t("auth.under18") };
   // DPDP: membership and family-tree consent, each ticked separately

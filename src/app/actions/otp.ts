@@ -7,18 +7,10 @@ import { db } from "@/lib/db";
 import { currentUser, startSession } from "@/lib/auth";
 import { audit } from "@/lib/permissions";
 import { str } from "@/lib/forms";
-import { headers } from "next/headers";
+import { clientIp } from "@/lib/ip";
 import { checkCode, hashIp, maskPhone, normalizePhone, sendCode, type SendResult } from "@/lib/otp";
 
-/**
- * The client's IP for the per-IP limit. Behind Render's proxy the last X-Forwarded-For entry is
- * the address the proxy saw; earlier entries can be set by the client, so they aren't trusted.
- */
-async function requesterIp() {
-  const h = await headers();
-  const chain = (h.get("x-forwarded-for") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-  return hashIp(chain.at(-1) ?? h.get("x-real-ip") ?? "local");
-}
+const requesterIp = async () => hashIp(await clientIp());
 
 /** Two steps: ask for the number, then for the code sent to it. `phone` is carried between them. */
 export type OtpState = { step: "phone" | "code"; phone?: string; sentTo?: string; error?: string; info?: string; ok?: boolean } | undefined;
@@ -51,7 +43,7 @@ export async function verifyLoginCodeAction(_: OtpState, fd: FormData): Promise<
   const phone = normalizePhone(str(fd, "phone"));
   const code = str(fd, "code") ?? "";
   if (!phone) return { step: "phone", error: t("invalidPhone") };
-  const result = await checkCode(phone, "LOGIN", code);
+  const result = await checkCode(phone, "LOGIN", code, await requesterIp());
   if (!result.ok) return { step: "code", phone, sentTo: maskPhone(phone), error: t(result.reason) };
   const user = await db.user.findUnique({ where: { id: result.userId } });
   // The number must still belong to this member
@@ -82,7 +74,7 @@ export async function confirmVerifyCodeAction(_: OtpState, fd: FormData): Promis
   if (!user) return { step: "phone", error: t("signInFirst") };
   const phone = normalizePhone(str(fd, "phone"));
   if (!phone) return { step: "phone", error: t("invalidPhone") };
-  const result = await checkCode(phone, "VERIFY_PHONE", str(fd, "code") ?? "");
+  const result = await checkCode(phone, "VERIFY_PHONE", str(fd, "code") ?? "", await requesterIp());
   if (!result.ok || result.userId !== user.id) return { step: "code", phone, sentTo: maskPhone(phone), error: t(result.ok ? "wrong" : result.reason) };
   const taken = await db.user.findFirst({ where: { phone, phoneVerifiedAt: { not: null }, id: { not: user.id } }, select: { id: true } });
   if (taken) return { step: "phone", error: t("phoneTaken") };
