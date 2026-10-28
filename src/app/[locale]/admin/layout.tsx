@@ -40,6 +40,7 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
           { href: "/admin/grievances", label: t("tabGrievances") },
           { href: "/admin/districts", label: t("tabDistricts") },
           { href: "/admin/locations", label: tl("tab") },
+          { href: "/admin/gedcom", label: t("tabGedcom") },
         ]
       : []),
   ];

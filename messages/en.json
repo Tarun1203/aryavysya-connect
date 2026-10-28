@@ -203,7 +203,9 @@
     "exitFullScreen": "Exit full screen",
     "zoomReset": "Back to 100%",
     "print": "Print",
-    "printedFrom": "Printed from {site} on {date}"
+    "printedFrom": "Printed from {site} on {date}",
+    "gedcom": "Download GEDCOM",
+    "gedcomHint": "This lineage as a GEDCOM file for other family-tree programs. Living people: names and birth year only."
   },
   "search": {
     "title": "Search the tree",
@@ -374,7 +376,8 @@
     "removeConfirm": "Yes, remove this gotra",
     "eyebrow": "Stewards of the tree",
     "tabReviews": "Reviews",
-    "tabGrievances": "Grievances"
+    "tabGrievances": "Grievances",
+    "tabGedcom": "GEDCOM import"
   },
   "errors": {
     "required": "Please fill in the required fields",
@@ -794,5 +797,38 @@
     "signOutHere": "Sign out",
     "signOutThere": "Sign out this device",
     "adminSignOut": "Sign out everywhere ({count})"
+  },
+  "gedcom": {
+    "importTitle": "Import a GEDCOM file",
+    "importIntro": "Add a family tree made in another program. Everyone is added as a new, unclaimed and unverified record; nothing is merged with people already here. Check the preview first.",
+    "file": "GEDCOM file (.ged)",
+    "fileHint": "UTF-8, up to 900 KB. Split larger trees into parts.",
+    "district": "District",
+    "districtHint": "Optional: the district these families belong to",
+    "preview": "Check the file",
+    "import": "Import {count} people",
+    "previewTitle": "What would be added",
+    "countPeople": "{count} people ({living} living)",
+    "countLinks": "{links} parent links, {couples} marriages",
+    "countGotras": "{matched} gotras recognised",
+    "skipped": "Not imported",
+    "livingNote": "The file has living people. Import only with their (or, for minors, their guardian's) permission. Minors stay private until a guardian gives consent.",
+    "gotrasUnknown": "Gotras not in our list (kept in each person's notes)",
+    "duplicates": "{count} people may already be in the tree",
+    "warnings": "{count} notes about the file",
+    "sample": "First people in the file",
+    "imported": "Imported {count} people.",
+    "openTree": "Open the tree",
+    "history": "Earlier imports",
+    "historyLine": "{count} people · {by} · {when}",
+    "undo": "Undo",
+    "undone": "Undone",
+    "undoHint": "Undo deletes the imported records nobody has claimed, edited or linked to other people since; those are kept.",
+    "undoPartial": "Removed {removed}; kept {kept} that were claimed, edited or linked since.",
+    "notAllowed": "Only the super administrator can import trees.",
+    "noFile": "Choose a GEDCOM file first.",
+    "tooLarge": "The file is larger than 900 KB. Split it into parts.",
+    "notUtf8": "The file is not UTF-8. Export it again as UTF-8 GEDCOM.",
+    "failed": "The import failed. Nothing was saved."
   }
 }
