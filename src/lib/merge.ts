@@ -2,8 +2,9 @@ import "server-only";
 import { db } from "./db";
 import { fullName } from "./reference";
 import { syncGotras } from "./gotra";
+import { isAncestor } from "./family";
 
-export type MergeProblem = "same" | "missing" | "alreadyMerged" | "twoAccounts" | "parentOfOther";
+export type MergeProblem = "same" | "missing" | "alreadyMerged" | "twoAccounts" | "parentOfOther" | "tooManyParents";
 
 /** Details the survivor takes from the duplicate when its own are empty. */
 const FILLABLE = [
@@ -39,9 +40,11 @@ export async function mergeProblem(keepId: string, dupId: string): Promise<Merge
   if (keep.status === "MERGED" || dup.status === "MERGED") return "alreadyMerged";
   // Two people who each have their own login are two members, not one record
   if (keep.user && dup.user) return "twoAccounts";
-  // One recorded as the other's parent can't be the same person
-  const direct = await db.parentChild.count({ where: { OR: [{ parentId: keepId, childId: dupId }, { parentId: dupId, childId: keepId }] } });
-  if (direct) return "parentOfOther";
+  // One recorded above the other in the tree (parent, grandparent, …) can't be the same person
+  if ((await isAncestor(keepId, dupId)) || (await isAncestor(dupId, keepId))) return "parentOfOther";
+  // Together they'd have more than two parents
+  const parents = await db.parentChild.findMany({ where: { childId: { in: [keepId, dupId] } }, select: { parentId: true } });
+  if (new Set(parents.map((p) => p.parentId)).size > 2) return "tooManyParents";
   return null;
 }
 

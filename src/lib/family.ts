@@ -171,3 +171,38 @@ async function linkingChild(personId: string, ancestorId: string) {
   }
   return null;
 }
+
+/**
+ * Whether `ancestorId` is already above `personId` in the tree (any number of generations).
+ * Used to refuse a parent link that would make someone their own ancestor.
+ */
+export async function isAncestor(ancestorId: string, personId: string, maxGenerations = 40) {
+  let frontier = [personId];
+  const seen = new Set(frontier);
+  for (let g = 0; g < maxGenerations && frontier.length; g++) {
+    const links = await db.parentChild.findMany({ where: { childId: { in: frontier } }, select: { parentId: true } });
+    frontier = [];
+    for (const { parentId } of links) {
+      if (parentId === ancestorId) return true;
+      if (!seen.has(parentId)) {
+        seen.add(parentId);
+        frontier.push(parentId);
+      }
+    }
+  }
+  return false;
+}
+
+/** Why `parentId` can't be recorded as a parent of `childId`, or null when it can. */
+export async function parentLinkProblem(parentId: string, childId: string): Promise<"self" | "twoParents" | "cycle" | "spouse" | null> {
+  if (parentId === childId) return "self";
+  const [parents, married] = await Promise.all([
+    db.parentChild.findMany({ where: { childId }, select: { parentId: true } }),
+    db.couple.count({ where: { OR: [{ person1Id: parentId, person2Id: childId }, { person1Id: childId, person2Id: parentId }] } }),
+  ]);
+  if (parents.some((p) => p.parentId === parentId)) return null; // already linked: the unique key says so
+  if (parents.length >= 2) return "twoParents";
+  if (married) return "spouse";
+  if (await isAncestor(childId, parentId)) return "cycle";
+  return null;
+}

@@ -162,7 +162,13 @@
     "birthOrderHint": "Order among brothers and sisters (1 = eldest). Leave empty to order by birth date.",
     "childNo": "Child {n}",
     "spouseNo": "Spouse {n}",
-    "childNoOf": "{n} of {of} children"
+    "childNoOf": "{n} of {of} children",
+    "birthYearForChild": "Enter a birth year for a living child (an estimate is fine) – it decides whether they are protected as a minor.",
+    "twoParents": "This person already has two parents recorded.",
+    "link_self": "A person can't be their own parent.",
+    "link_twoParents": "This child already has two parents recorded.",
+    "link_cycle": "That would make someone their own ancestor: the child is already above this person in the tree.",
+    "link_spouse": "They are recorded as married, so one can't be the other's parent."
   },
   "tree": {
     "title": "Family tree of {name}",
@@ -545,7 +551,8 @@
     "problem_missing": "One of the records no longer exists.",
     "problem_alreadyMerged": "One of the records has already been merged.",
     "problem_twoAccounts": "Both records have their own login, so they are two members. Ask them which record is right first.",
-    "problem_parentOfOther": "One is recorded as the other's parent, so they can't be the same person."
+    "problem_parentOfOther": "One is recorded above the other in the tree (parent, grandparent…), so they can't be the same person.",
+    "problem_tooManyParents": "Together the two records have more than two parents. Correct the parents first."
   },
   "consent": {
     "requiredAtRegistration": "Please tick both consent boxes to register.",
@@ -590,7 +597,8 @@
     "basis_OFFLINE_FORM": "Signed form recorded by an administrator",
     "basis_FAMILY": "Confirmed by family",
     "withdrawnOn": "Withdrawn {date}",
-    "notice": "Notice {v}"
+    "notice": "Notice {v}",
+    "ageUnknown": "No birth year is recorded, so they are treated as a child: shown as \"Private\" outside the family until a birth year is added or a parent gives consent."
   },
   "otp": {
     "withEmail": "Email",

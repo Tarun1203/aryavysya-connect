@@ -6,7 +6,7 @@ import { redirect } from "@/i18n/navigation";
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { audit, canAddRelative, canEditPerson, canView, isAdmin, type Relation } from "@/lib/permissions";
-import { familyScope } from "@/lib/family";
+import { familyScope, parentLinkProblem } from "@/lib/family";
 import { personFields, str, type FormState } from "@/lib/forms";
 import { cleanPlaces } from "@/lib/locations/resolve";
 import { findDuplicates } from "@/lib/dedup";
@@ -43,6 +43,9 @@ export async function addRelativeAction(anchorId: string, relation: Relation, _:
   if (!(await canAddRelative(user, anchorId, relation, coParentId))) return { error: t("person.outOfScope") };
   const parsed = personFields(fd);
   if (!parsed.success) return { error: t("errors.required") };
+  // A living child needs a birth year: without one we can't tell whether they are a minor
+  if (relation === "child" && parsed.data.isLiving && !parsed.data.birthDate) return { error: t("person.birthYearForChild") };
+  if (relation === "parent" && (await db.parentChild.count({ where: { childId: anchorId } })) >= 2) return { error: t("person.twoParents") };
 
   const anchor = await db.person.findUniqueOrThrow({ where: { id: anchorId }, include: { district: true } });
   const places = await cleanPlaces(parsed.data);
@@ -144,6 +147,9 @@ export async function linkExistingAction(anchorId: string, relation: Relation, _
         },
       });
     } else {
+      // No loops (someone becoming their own ancestor), at most two parents, not one's spouse
+      const problem = await parentLinkProblem(parentId, childId);
+      if (problem) return { error: t(`person.link_${problem}`) };
       await db.parentChild.create({ data: { parentId, childId } });
     }
   } catch {
