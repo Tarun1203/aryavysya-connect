@@ -15,7 +15,9 @@
     "dev:localdb": "node scripts/dev-localdb.mjs",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "encryption:fields": "tsx scripts/encrypted-fields.ts",
-    "encryption:backfill": "tsx --conditions=react-server scripts/encryption-backfill.ts"
+    "encryption:backfill": "tsx --conditions=react-server scripts/encryption-backfill.ts",
+    "backup": "tsx scripts/backup.ts",
+    "backup:open": "tsx scripts/backup-open.ts"
   },
   "dependencies": {
     "@neon/config": "^1.9.4",

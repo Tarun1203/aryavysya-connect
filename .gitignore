@@ -45,3 +45,8 @@ next-env.d.ts
 /src/generated
 !.env.example
 .neon
+
+# Encrypted database backups (npm run backup)
+/backups
+*.vvbk
+*.dump
