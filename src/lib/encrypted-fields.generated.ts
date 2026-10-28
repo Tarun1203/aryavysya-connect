@@ -71,7 +71,8 @@ export const FIELD_MAP: FieldMap = {
       "changesReviewed": "ChangeRequest",
       "consentsGiven": "Consent",
       "consentsWithdrawn": "Consent",
-      "otpChallenges": "OtpChallenge"
+      "otpChallenges": "OtpChallenge",
+      "sessions": "Session"
     },
     "FamilyClaim": {
       "user": "User",
@@ -130,6 +131,9 @@ export const FIELD_MAP: FieldMap = {
       "person": "Person",
       "proposedBy": "User",
       "reviewedBy": "User"
+    },
+    "Session": {
+      "user": "User"
     }
   }
 };
