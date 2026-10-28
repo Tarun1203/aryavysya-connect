@@ -22,3 +22,7 @@ services:
         sync: false
       - key: SEED_ADMIN_PASSWORD
         sync: false
+      - key: MSG91_AUTH_KEY # MSG91 → Authkey; phone sign-in stays hidden until both are set
+        sync: false
+      - key: MSG91_OTP_TEMPLATE_ID # MSG91 → OTP → Templates (DLT-approved, contains ##OTP##)
+        sync: false

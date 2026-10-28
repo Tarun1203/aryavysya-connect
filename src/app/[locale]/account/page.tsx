@@ -4,7 +4,10 @@ import { db } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { editableIds } from "@/lib/permissions";
 import { fullName } from "@/lib/reference";
-import { Card, Notice, PageTitle } from "@/components/ui";
+import { Badge, Card, Notice, PageTitle } from "@/components/ui";
+import { OtpForm } from "@/components/OtpForm";
+import { confirmVerifyCodeAction, sendVerifyCodeAction } from "@/app/actions/otp";
+import { maskPhone, otpAvailable } from "@/lib/otp";
 import { MarriageRequests } from "@/components/MarriageRequests";
 
 export default async function AccountPage({ params }: PageProps<"/[locale]/account">) {
@@ -15,6 +18,7 @@ export default async function AccountPage({ params }: PageProps<"/[locale]/accou
   const u = user!;
   const t = await getTranslations("account");
   const tp = await getTranslations("person");
+  const to = await getTranslations("otp");
   const format = await getFormatter();
 
   const [claims, self, scope] = await Promise.all([
@@ -60,6 +64,27 @@ export default async function AccountPage({ params }: PageProps<"/[locale]/accou
           </div>
         )}
       </Card>
+
+      {/* Phone: verified by a one-time code; only a verified number can be used to sign in */}
+      {otpAvailable() && (
+        <Card className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold">{to("cardTitle")}</h2>
+            {u.phoneVerifiedAt ? <Badge>{to("verifiedBadge")}</Badge> : <Badge tone="muted">{to("notVerifiedBadge")}</Badge>}
+          </div>
+          {u.phoneVerifiedAt && u.phone ? (
+            <p className="text-sm text-muted">{to("verifiedText", { phone: maskPhone(u.phone) })}</p>
+          ) : (
+            <p className="text-sm text-muted">{to("verifyText")}</p>
+          )}
+          <details open={!u.phoneVerifiedAt}>
+            <summary className="cursor-pointer text-sm text-brand">{u.phoneVerifiedAt ? to("change") : to("verifyNow")}</summary>
+            <div className="mt-3 max-w-sm">
+              <OtpForm send={sendVerifyCodeAction} verify={confirmVerifyCodeAction} submitLabel={to("verify")} initialPhone={u.phoneVerifiedAt ? "" : (u.phone ?? "")} />
+            </div>
+          </details>
+        </Card>
+      )}
 
       {(u.role === "MEMBER" || u.role === "LOCAL_ADMIN") && scope && scope.size > 0 && (
         <Notice tone="ok">{t("editScope", { count: scope.size })}</Notice>

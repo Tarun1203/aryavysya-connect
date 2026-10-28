@@ -53,6 +53,14 @@ enum MarriageStatus {
   DIVORCED
 }
 
+/// Why a one-time code was sent
+enum OtpPurpose {
+  /// Signing in with a verified phone number
+  LOGIN
+  /// Proving a phone number belongs to the signed-in member
+  VERIFY_PHONE
+}
+
 /// What a person's data is used for (DPDP Act 2023: consent is per purpose)
 enum ConsentPurpose {
   /// Processing the member's own details to verify and keep their membership
@@ -215,14 +223,16 @@ model Gotra {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  name         String
-  email        String     @unique
-  phone        String?
-  passwordHash String
-  role         Role       @default(MEMBER)
-  status       UserStatus @default(PENDING)
-  locale       String     @default("en")
+  id              String     @id @default(cuid())
+  name            String
+  email           String     @unique
+  phone           String?
+  /// Set once the member proved the number with a one-time code; only verified numbers can sign in
+  phoneVerifiedAt DateTime?
+  passwordHash    String
+  role            Role       @default(MEMBER)
+  status          UserStatus @default(PENDING)
+  locale          String     @default("en")
 
   districtId String?
   district   District? @relation(fields: [districtId], references: [id])
@@ -246,15 +256,16 @@ model User {
   approvedAt   DateTime?
   createdAt    DateTime  @default(now())
 
-  claims             FamilyClaim[] @relation("ClaimUser")
-  reviewedClaims     FamilyClaim[] @relation("ClaimReviewer")
-  endorsedClaims     FamilyClaim[] @relation("ClaimEndorser")
+  claims             FamilyClaim[]  @relation("ClaimUser")
+  reviewedClaims     FamilyClaim[]  @relation("ClaimReviewer")
+  endorsedClaims     FamilyClaim[]  @relation("ClaimEndorser")
   audit              AuditLog[]
-  marriagesProposed  Couple[]      @relation("MarriageProposer")
-  marriagesConfirmed Couple[]      @relation("MarriageConfirmer")
-  consents           Consent[]     @relation("ConsentSubject")
-  consentsGiven      Consent[]     @relation("ConsentGiver")
-  consentsWithdrawn  Consent[]     @relation("ConsentWithdrawer")
+  marriagesProposed  Couple[]       @relation("MarriageProposer")
+  marriagesConfirmed Couple[]       @relation("MarriageConfirmer")
+  consents           Consent[]      @relation("ConsentSubject")
+  consentsGiven      Consent[]      @relation("ConsentGiver")
+  consentsWithdrawn  Consent[]      @relation("ConsentWithdrawer")
+  otpChallenges      OtpChallenge[]
 }
 
 /// A member's request to be verified as belonging to a family.
@@ -492,4 +503,25 @@ model Consent {
 
   @@index([personId, purpose])
   @@index([userId])
+}
+
+/**
+ * A one-time code sent by SMS (MSG91). Only a hash of the code is stored; it expires, allows a few
+ * attempts, and is used once. See src/lib/otp.ts.
+ */
+model OtpChallenge {
+  id         String     @id @default(cuid())
+  /// Digits with the country code, e.g. 919876543210
+  phone      String
+  purpose    OtpPurpose
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash   String
+  attempts   Int        @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  @@index([phone, createdAt])
+  @@index([userId, createdAt])
 }

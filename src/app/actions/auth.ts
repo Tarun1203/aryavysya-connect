@@ -8,6 +8,7 @@ import { endSession, hashPassword, startSession, verifyPassword } from "@/lib/au
 import { gender, str, type FormState } from "@/lib/forms";
 import { validLocality } from "@/lib/locations/resolve";
 import { recordConsent } from "@/lib/consent";
+import { normalizePhone } from "@/lib/otp";
 
 export async function loginAction(_: FormState, fd: FormData): Promise<FormState> {
   const t = await getTranslations("auth");
@@ -68,7 +69,8 @@ export async function registerAction(_: FormState, fd: FormData): Promise<FormSt
     data: {
       name: d.name,
       email: d.email,
-      phone: d.phone,
+      // Stored as digits with the country code when it is a valid mobile number; verified later by a code
+      phone: normalizePhone(d.phone) ?? d.phone,
       passwordHash: await hashPassword(d.password),
       districtId: d.districtId,
       organizationId: org?.id,
