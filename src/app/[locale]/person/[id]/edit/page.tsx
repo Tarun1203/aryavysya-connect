@@ -9,6 +9,7 @@ import { pickerDefaults } from "@/lib/locations/resolve";
 import { updatePersonAction } from "@/app/actions/person";
 import { PersonForm } from "@/components/PersonForm";
 import { PageTitle } from "@/components/ui";
+import { editNeedsReview } from "@/lib/review";
 
 export default async function EditPersonPage({ params }: PageProps<"/[locale]/person/[id]/edit">) {
   const { locale, id } = await params;
@@ -18,6 +19,8 @@ export default async function EditPersonPage({ params }: PageProps<"/[locale]/pe
   if (!person) notFound();
   if (!(await canEditPerson(user, id))) redirect({ href: `/person/${id}`, locale });
   const t = await getTranslations("person");
+  const tr = await getTranslations("review");
+  const review = await editNeedsReview(user, id);
   const [gotras, native, birth] = await Promise.all([
     gotraOptions(locale),
     pickerDefaults(person.nativeLocalityId, person.districtId),
@@ -29,7 +32,14 @@ export default async function EditPersonPage({ params }: PageProps<"/[locale]/pe
       <PageTitle>
         {t("edit")}: {fullName(person)}
       </PageTitle>
-      <PersonForm action={updatePersonAction.bind(null, id)} defaults={person} gotras={gotras} places={{ native, birth }} />
+      <PersonForm
+        action={updatePersonAction.bind(null, id)}
+        defaults={person}
+        gotras={gotras}
+        places={{ native, birth }}
+        submitLabel={review ? tr("sendForReview") : undefined}
+        review={review ? { notice: tr(person.verifiedAt ? "editVerifiedNotice" : "editMemberNotice"), reasonLabel: tr("reason") } : undefined}
+      />
     </div>
   );
 }

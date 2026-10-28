@@ -23,6 +23,7 @@ export async function getFamily(personId: string) {
       photo: { select: { visible: true, updatedAt: true } },
       district: true,
       user: true,
+      verifiedBy: { select: { name: true } },
       nativeLocality: { include: { taluk: true, district: true } },
       birthLocality: { include: { taluk: true, district: true } },
     },
@@ -57,13 +58,13 @@ export async function getFamily(personId: string) {
 
   return {
     person,
-    parents: parentLinks.map((l) => ({ linkId: l.id, person: l.parent })).sort((a, b) => (a.person.gender === "MALE" ? -1 : b.person.gender === "MALE" ? 1 : 0)),
+    parents: parentLinks.map((l) => ({ linkId: l.id, verifiedAt: l.verifiedAt, person: l.parent })).sort((a, b) => (a.person.gender === "MALE" ? -1 : b.person.gender === "MALE" ? 1 : 0)),
     spouses: joined.map((c) => ({ linkId: c.id, status: c.status, marriageDate: c.marriageDate, endDate: c.endDate, person: other(c) })),
     /** Marriage links waiting for acceptance; `incoming` when this person's side has to answer */
     proposals: couples
       .filter((c) => c.status === "PROPOSED")
       .map((c) => ({ linkId: c.id, incoming: c.person2Id === personId, proposedBy: c.proposedBy?.name ?? null, person: other(c) })),
-    children: childLinks.map((l) => ({ linkId: l.id, person: l.child })).sort((a, b) => siblingOrder(a.person, b.person)),
+    children: childLinks.map((l) => ({ linkId: l.id, verifiedAt: l.verifiedAt, person: l.child })).sort((a, b) => siblingOrder(a.person, b.person)),
     siblings,
     childNo,
   };

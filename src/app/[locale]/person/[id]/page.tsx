@@ -12,17 +12,21 @@ import { PersonPicker } from "@/components/PersonPicker";
 import { PrivateNotice } from "@/components/PrivateNotice";
 import { consentPanel, isPrivateFor, maskList } from "@/lib/consent";
 import { ConsentCard } from "@/components/ConsentCard";
+import { ChangeRequestList, requestInclude } from "@/components/ChangeRequestList";
+import { editNeedsReview, isReviewer, openDisputes } from "@/lib/review";
+import { disputeAction, verifyLinkAction, verifyPersonAction } from "@/app/actions/review";
 import { respondMarriageAction, updateMarriageAction } from "@/app/actions/marriage";
 import Image from "next/image";
-import { Badge, buttonClass, Card, Notice } from "@/components/ui";
+import { Badge, buttonClass, Card, Notice, Textarea } from "@/components/ui";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { defaultVisible, photoRights, photoUrl } from "@/lib/photo";
 import { removePhotoAction, setPhotoVisibleAction, uploadPhotoAction } from "@/app/actions/photo";
 
 type P = { id: string; givenName: string; surname: string; birthDate: string | null; deathDate: string | null; isLiving: boolean; gotra: { name: string; nameTe: string | null; nameKn: string | null; nameTa: string | null } | null };
 
-export default async function PersonPage({ params }: PageProps<"/[locale]/person/[id]">) {
+export default async function PersonPage({ params, searchParams }: PageProps<"/[locale]/person/[id]">) {
   const { locale, id } = await params;
+  const { proposed } = (await searchParams) as { proposed?: string };
   setRequestLocale(locale);
   const user = await requireViewer(locale);
   const family = await getFamily(id);
@@ -58,6 +62,14 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
     photoRights(user, id),
   ]);
   const consent = person.isLiving ? await consentPanel(user, id) : null;
+  const tr = await getTranslations("review");
+  const [reviewer, needsReview, disputes, requests] = await Promise.all([
+    isReviewer(user, id),
+    editNeedsReview(user, id),
+    openDisputes([id]),
+    db.changeRequest.findMany({ where: { personId: id }, include: requestInclude, orderBy: { createdAt: "desc" }, take: 20 }),
+  ]);
+  const disputed = disputes.people.has(id);
   const self = person.user?.id === user.id;
   const showConsent = !!consent && (editable || consent.canGiveAsGuardian || consent.canRecordForm || consent.canGiveSelf || consent.canWithdraw);
   const tp = await getTranslations("photo");
@@ -86,8 +98,17 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
     [t("currentCity"), person.currentCity],
   ];
 
-  const PersonLink = ({ p, linkId, kind, no }: { p: P; linkId?: string; kind?: "parentChild" | "couple"; no?: string }) => (
-    <li className="flex items-center justify-between gap-2 rounded-xl border border-line px-3 py-2">
+  // Reported until an administrator verifies the link; disputed while a dispute about it is open
+  const linkChip = (linkId: string, verifiedAt: Date | null | undefined) =>
+    disputes.links.has(linkId) ? (
+      <Badge tone="gold">{tr("disputed")}</Badge>
+    ) : verifiedAt ? (
+      <Badge>✓ {tr("verified")}</Badge>
+    ) : (
+      <Badge tone="muted">{tr("reported")}</Badge>
+    );
+  const PersonLink = ({ p, linkId, kind, no, verifiedAt }: { p: P; linkId?: string; kind?: "parentChild" | "couple"; no?: string; verifiedAt?: Date | null }) => (
+    <li className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line px-3 py-2">
       {(p as { private?: boolean }).private ? (
         <span className="text-sm italic text-muted">{p.givenName}</span>
       ) : (
@@ -98,6 +119,16 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
           {[lifeSpan(p), gotraLabel(p.gotra, locale)].filter(Boolean).join(" · ")}
         </span>
       </Link>
+      )}
+      {kind === "parentChild" && linkId && (
+        <span className="ml-auto flex items-center gap-2">
+          {linkChip(linkId, verifiedAt)}
+          {reviewer && (
+            <form action={verifyLinkAction.bind(null, linkId, !verifiedAt)}>
+              <button className="text-[11px] text-brand hover:underline">{verifiedAt ? tr("unverify") : tr("verify")}</button>
+            </form>
+          )}
+        </span>
       )}
       {editable && linkId && kind && (
         <form action={removeLinkAction.bind(null, kind, linkId, id)}>
@@ -136,6 +167,14 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
               )}
               <div className="mt-1 flex flex-wrap gap-2">
                 <Badge>{t(`state_${personState(person)}`)}</Badge>
+                {person.verifiedAt ? (
+                  <Badge>
+                    ✓ {tr("verifiedBy", { name: person.verifiedBy?.name ?? "—", date: format.dateTime(person.verifiedAt, { dateStyle: "medium" }) })}
+                  </Badge>
+                ) : (
+                  <Badge tone="muted">{tr("notVerified")}</Badge>
+                )}
+                {disputed && <Badge tone="gold">{tr("disputed")}</Badge>}
                 {lifeSpan(person) && <Badge tone="muted">{lifeSpan(person)}</Badge>}
                 <Badge tone="muted">
                   <span className="font-mono">{memberCode(person.memberNo)}</span>
@@ -152,16 +191,22 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
             <Link href={`/tree/${id}`} className={buttonClass("ghost")}>
               {t("viewTree")}
             </Link>
+            {reviewer && (
+              <form action={verifyPersonAction.bind(null, id, !person.verifiedAt)}>
+                <button className={buttonClass("ghost")}>{person.verifiedAt ? tr("unverifyPerson") : tr("verifyPerson")}</button>
+              </form>
+            )}
             {editable && (
               <Link href={`/person/${id}/edit`} className={buttonClass("primary")}>
-                {t("edit")}
+                {needsReview ? tr("proposeChange") : t("edit")}
               </Link>
             )}
           </div>
         </div>
       </div>
 
-      <Notice tone={editable ? "ok" : "info"}>{editable ? t("editable") : t("readOnly")}</Notice>
+      {proposed && <Notice tone="ok">{tr("sentNotice")}</Notice>}
+      <Notice tone={editable ? "ok" : "info"}>{editable ? (needsReview ? tr("editableWithReview") : t("editable")) : t("readOnly")}</Notice>
 
       {proposals.map((pr) => (
         <Notice key={pr.linkId} tone="warn">
@@ -242,7 +287,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
         <Card className="grid gap-6 lg:col-span-2 sm:grid-cols-2">
           <Section title={t("parents")} none={t("none")}>
             {parents.map((p) => (
-              <PersonLink key={p.linkId} p={p.person} linkId={p.linkId} kind="parentChild" />
+              <PersonLink key={p.linkId} p={p.person} linkId={p.linkId} kind="parentChild" verifiedAt={p.verifiedAt} />
             ))}
           </Section>
           <Section title={t("spouses")} none={t("none")}>
@@ -278,7 +323,7 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
           </Section>
           <Section title={t("children")} none={t("none")}>
             {children.map((c, i) => (
-              <PersonLink key={c.linkId} p={c.person} linkId={c.linkId} kind="parentChild" no={t("childNo", { n: i + 1 })} />
+              <PersonLink key={c.linkId} p={c.person} linkId={c.linkId} kind="parentChild" no={t("childNo", { n: i + 1 })} verifiedAt={c.verifiedAt} />
             ))}
           </Section>
           <Section title={t("siblings")} none={t("none")}>
@@ -307,6 +352,46 @@ export default async function PersonPage({ params }: PageProps<"/[locale]/person
           )}
         </Card>
       </div>
+
+      <Card className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold">{tr("cardTitle")}</h2>
+          {requests.some((r) => r.status === "PENDING") && (
+            <Badge tone="gold">{tr("pendingCount", { count: requests.filter((r) => r.status === "PENDING").length })}</Badge>
+          )}
+        </div>
+        {requests.length ? <ChangeRequestList requests={requests} user={user} /> : <p className="text-sm text-muted">{tr("none")}</p>}
+        <details className="rounded-xl border border-line p-3">
+          <summary className="cursor-pointer text-sm font-medium text-brand">{tr("disputeThis")}</summary>
+          <ActionForm action={disputeAction.bind(null, id)} submit={tr("sendDispute")} className="mt-3 flex flex-col gap-3">
+            <p className="text-xs text-muted">{tr("disputeIntro")}</p>
+            <label className="flex flex-col gap-1 text-sm">
+              {tr("whatIsWrong")}
+              <select name="subject" className="rounded-xl border border-line bg-background px-3 py-2">
+                <option value="person">{tr("subjectPerson", { name: fullName(person) })}</option>
+                {parents.map((pl) => (
+                  <option key={pl.linkId} value={"parentChild:" + pl.linkId}>
+                    {tr("subjectParent", { parent: fullName(pl.person), child: fullName(person) })}
+                  </option>
+                ))}
+                {children.map((cl) => (
+                  <option key={cl.linkId} value={"parentChild:" + cl.linkId}>
+                    {tr("subjectParent", { parent: fullName(person), child: fullName(cl.person) })}
+                  </option>
+                ))}
+                {spouses.map((sl) => (
+                  <option key={sl.linkId} value={"couple:" + sl.linkId}>
+                    {tr("subjectMarriage", { a: fullName(person), b: fullName(sl.person) })}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Textarea name="reason" required placeholder={tr("reasonPlaceholder")} />
+            <Textarea name="correction" placeholder={tr("correctionPlaceholder")} />
+            <Textarea name="evidence" placeholder={tr("evidencePlaceholder")} />
+          </ActionForm>
+        </details>
+      </Card>
 
       {showConsent && consent && (
         <ConsentCard personId={id} name={fullName(person)} panel={consent} showHistory={isAdmin(user) || self || consent.canGiveAsGuardian} />

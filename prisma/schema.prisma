@@ -53,6 +53,25 @@ enum MarriageStatus {
   DIVORCED
 }
 
+/// A proposed change to a person's record, a request to remove a link, or a dispute
+enum ChangeKind {
+  /// New values for some of the person's details
+  EDIT
+  /// Remove a parent–child link or a marriage
+  UNLINK
+  /// "This is wrong" – about the details, a parent link or a marriage
+  DISPUTE
+}
+
+enum ChangeStatus {
+  PENDING
+  /// Applied (edit, unlink) or upheld (dispute)
+  APPROVED
+  REJECTED
+  /// Taken back by the person who made it
+  WITHDRAWN
+}
+
 /// Why a one-time code was sent
 enum OtpPurpose {
   /// Signing in with a verified phone number
@@ -256,15 +275,18 @@ model User {
   approvedAt   DateTime?
   createdAt    DateTime  @default(now())
 
-  claims             FamilyClaim[]  @relation("ClaimUser")
-  reviewedClaims     FamilyClaim[]  @relation("ClaimReviewer")
-  endorsedClaims     FamilyClaim[]  @relation("ClaimEndorser")
+  claims             FamilyClaim[]   @relation("ClaimUser")
+  reviewedClaims     FamilyClaim[]   @relation("ClaimReviewer")
+  endorsedClaims     FamilyClaim[]   @relation("ClaimEndorser")
   audit              AuditLog[]
-  marriagesProposed  Couple[]       @relation("MarriageProposer")
-  marriagesConfirmed Couple[]       @relation("MarriageConfirmer")
-  consents           Consent[]      @relation("ConsentSubject")
-  consentsGiven      Consent[]      @relation("ConsentGiver")
-  consentsWithdrawn  Consent[]      @relation("ConsentWithdrawer")
+  marriagesProposed  Couple[]        @relation("MarriageProposer")
+  marriagesConfirmed Couple[]        @relation("MarriageConfirmer")
+  consents           Consent[]       @relation("ConsentSubject")
+  verifiedPeople     Person[]        @relation("PersonVerifier")
+  changesProposed    ChangeRequest[] @relation("ChangeProposer")
+  changesReviewed    ChangeRequest[] @relation("ChangeReviewer")
+  consentsGiven      Consent[]       @relation("ConsentGiver")
+  consentsWithdrawn  Consent[]       @relation("ConsentWithdrawer")
   otpChallenges      OtpChallenge[]
 }
 
@@ -320,6 +342,10 @@ model Person {
   status       PersonStatus @default(UNCLAIMED)
   /// Set when this record was merged into another; lookups redirect there
   mergedIntoId String?
+  /// An administrator checked these details; members' edits then go for review (src/lib/review.ts)
+  verifiedAt   DateTime?
+  verifiedById String?
+  verifiedBy   User?        @relation("PersonVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
 
   givenName      String
   /// Intiperu – the family (house) name
@@ -373,14 +399,15 @@ model Person {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  asChild  ParentChild[] @relation("ChildLink")
-  asParent ParentChild[] @relation("ParentLink")
-  couples1 Couple[]      @relation("Partner1")
-  couples2 Couple[]      @relation("Partner2")
-  user     User?         @relation("UserSelf")
-  photo    PersonPhoto?
-  claims   FamilyClaim[]
-  consents Consent[]
+  asChild        ParentChild[]   @relation("ChildLink")
+  asParent       ParentChild[]   @relation("ParentLink")
+  couples1       Couple[]        @relation("Partner1")
+  couples2       Couple[]        @relation("Partner2")
+  user           User?           @relation("UserSelf")
+  photo          PersonPhoto?
+  claims         FamilyClaim[]
+  consents       Consent[]
+  changeRequests ChangeRequest[]
 
   @@index([surname, givenName])
   @@index([gotraId])
@@ -388,11 +415,14 @@ model Person {
 }
 
 model ParentChild {
-  id       String @id @default(cuid())
-  parentId String
-  childId  String
+  id           String    @id @default(cuid())
+  parentId     String
+  childId      String
   /// BIOLOGICAL | ADOPTED
-  type     String @default("BIOLOGICAL")
+  type         String    @default("BIOLOGICAL")
+  /// Reported until an administrator verifies the link; "disputed" while a dispute about it is open
+  verifiedAt   DateTime?
+  verifiedById String?
 
   parent Person @relation("ParentLink", fields: [parentId], references: [id], onDelete: Cascade)
   child  Person @relation("ChildLink", fields: [childId], references: [id], onDelete: Cascade)
@@ -529,4 +559,40 @@ model OtpChallenge {
   @@index([userId, createdAt])
   @@index([ipHash, createdAt])
   @@index([createdAt])
+}
+
+/**
+ * Proposal → review → decision for changes that need a second pair of eyes: members' edits to
+ * verified records or to another member's own record, removing a verified link, and disputes.
+ * The proposal keeps only the changed fields as { field: { from, to } }, so applying it never
+ * overwrites unrelated edits made in the meantime. See src/lib/review.ts.
+ */
+model ChangeRequest {
+  id         String       @id @default(cuid())
+  kind       ChangeKind
+  status     ChangeStatus @default(PENDING)
+  personId   String
+  person     Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+  /// For UNLINK and link disputes: the ParentChild or Couple row, and which of the two it is
+  linkId     String?
+  linkKind   String?
+  /// For EDIT: { field: { from, to } }
+  changes    Json?
+  /// Why – required for every request
+  reason     String
+  /// Dispute: what the correct details are, and what supports it (a document, an elder, a register)
+  correction String?
+  evidence   String?
+
+  proposedById String?
+  proposedBy   User?     @relation("ChangeProposer", fields: [proposedById], references: [id], onDelete: SetNull)
+  reviewedById String?
+  reviewedBy   User?     @relation("ChangeReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?
+  reviewNote   String?
+  createdAt    DateTime  @default(now())
+
+  @@index([personId, status])
+  @@index([status, createdAt])
+  @@index([proposedById])
 }

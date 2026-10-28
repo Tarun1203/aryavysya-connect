@@ -6,6 +6,7 @@ import { editableIds } from "@/lib/permissions";
 import { fullName } from "@/lib/reference";
 import { Badge, Card, Notice, PageTitle } from "@/components/ui";
 import { OtpForm } from "@/components/OtpForm";
+import { ChangeRequestList, requestInclude } from "@/components/ChangeRequestList";
 import { confirmVerifyCodeAction, sendVerifyCodeAction } from "@/app/actions/otp";
 import { maskPhone, otpAvailable } from "@/lib/otp";
 import { MarriageRequests } from "@/components/MarriageRequests";
@@ -19,6 +20,12 @@ export default async function AccountPage({ params }: PageProps<"/[locale]/accou
   const t = await getTranslations("account");
   const tp = await getTranslations("person");
   const to = await getTranslations("otp");
+  const tr = await getTranslations("review");
+  // Proposals about this member's own record, and the requests they made
+  const [aboutMe, myRequests] = await Promise.all([
+    u.personId ? db.changeRequest.findMany({ where: { personId: u.personId, status: "PENDING", proposedById: { not: u.id } }, include: requestInclude, orderBy: { createdAt: "desc" } }) : [],
+    db.changeRequest.findMany({ where: { proposedById: u.id }, include: requestInclude, orderBy: { createdAt: "desc" }, take: 20 }),
+  ]);
   const format = await getFormatter();
 
   const [claims, self, scope] = await Promise.all([
@@ -91,6 +98,23 @@ export default async function AccountPage({ params }: PageProps<"/[locale]/accou
       )}
 
       {u.status === "APPROVED" && <MarriageRequests user={u} />}
+
+      {(aboutMe.length > 0 || myRequests.length > 0) && (
+        <Card className="flex flex-col gap-4">
+          {aboutMe.length > 0 && (
+            <div>
+              <h2 className="mb-2 font-semibold">{tr("aboutYou")}</h2>
+              <ChangeRequestList requests={aboutMe} user={u} />
+            </div>
+          )}
+          {myRequests.length > 0 && (
+            <div>
+              <h2 className="mb-2 font-semibold">{tr("myRequests")}</h2>
+              <ChangeRequestList requests={myRequests} user={u} showPerson />
+            </div>
+          )}
+        </Card>
+      )}
 
       {claims.length > 0 && (
         <Card>

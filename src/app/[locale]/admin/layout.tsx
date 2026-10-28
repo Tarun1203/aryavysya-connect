@@ -24,6 +24,7 @@ export default async function AdminLayout({ children, params }: LayoutProps<"/[l
 
   const tabs = [
     { href: "/admin", label: t("tabPending") },
+    { href: "/admin/reviews", label: t("tabReviews") },
     ...(scope && scope.kind !== "local"
       ? [
           { href: "/admin/organizations", label: t("tabOrgs") },

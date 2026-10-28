@@ -46,9 +46,11 @@ type Props = {
   submitLabel?: string;
   /** When adding a relative: link a found duplicate instead of creating a new record */
   linkAction?: (state: FormState, fd: FormData) => Promise<FormState>;
+  /** The edit goes for review (a verified record, or another member's): explain, and ask why */
+  review?: { notice: string; reasonLabel: string };
 };
 
-export function PersonForm({ action, defaults = {}, gotras, places = { native: {}, birth: {} }, coParents, submitLabel, linkAction }: Props) {
+export function PersonForm({ action, defaults = {}, gotras, places = { native: {}, birth: {} }, coParents, submitLabel, linkAction, review }: Props) {
   const t = useTranslations("person");
   const tl = useTranslations("locations");
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -200,6 +202,14 @@ export function PersonForm({ action, defaults = {}, gotras, places = { native: {
             </>
           }
         />
+      )}
+      {review && (
+        <Card className="flex flex-col gap-3">
+          <Notice tone="warn">{review.notice}</Notice>
+          <Field label={`${review.reasonLabel} *`}>
+            <Textarea name="reason" required />
+          </Field>
+        </Card>
       )}
       <Button variant={state?.duplicates ? "ghost" : "primary"} disabled={pending} className="self-start">
         {state?.duplicates ? t("checkAgain") : (submitLabel ?? t("save"))}

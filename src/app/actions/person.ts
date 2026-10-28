@@ -14,6 +14,8 @@ import { marriageCheck } from "@/lib/marriage";
 import { rulesFor, syncAround } from "@/lib/gotra";
 import { mergePeople, mergeProblem } from "@/lib/merge";
 import { privateIds, privateViewer } from "@/lib/consent";
+import { diff, editNeedsReview, unlinkNeedsReview } from "@/lib/review";
+import type { Prisma } from "@/generated/prisma/client";
 
 export async function updatePersonAction(personId: string, _: FormState, fd: FormData): Promise<FormState> {
   const t = await getTranslations();
@@ -24,6 +26,17 @@ export async function updatePersonAction(personId: string, _: FormState, fd: For
 
   const before = await db.person.findUniqueOrThrow({ where: { id: personId } });
   const data = await cleanPlaces(parsed.data);
+  // A verified record, or another member's own record: the edit becomes a proposal for review
+  if (await editNeedsReview(user, personId)) {
+    const changes = diff(before, data);
+    if (!Object.keys(changes).length) return { error: t("review.noChanges") };
+    const reason = str(fd, "reason");
+    if (!reason) return { error: t("review.reasonRequired") };
+    const req = await db.changeRequest.create({ data: { kind: "EDIT", personId, changes: changes as Prisma.InputJsonValue, reason, proposedById: user!.id } });
+    await audit(user, "propose-edit", "Person", personId, { changeRequest: req.id, fields: Object.keys(changes) });
+    revalidatePath("/", "layout");
+    redirect({ href: `/person/${personId}?proposed=1`, locale: await getLocale() });
+  }
   await db.person.update({ where: { id: personId }, data: { ...data, updatedById: user!.id } });
   await syncAround(personId);
   const changed = Object.fromEntries(
@@ -179,6 +192,18 @@ export async function removeLinkAction(kind: "parentChild" | "couple", linkId: s
     ? await canEditPerson(user, link[0])
     : (await Promise.all(link.map((id) => canEditPerson(user, id)))).every(Boolean);
   if (!allowed) return;
+  // Removing a verified link (or one touching a verified person) is proposed, not done
+  if (!pending && (await unlinkNeedsReview(user, kind, linkId))) {
+    const open = await db.changeRequest.count({ where: { kind: "UNLINK", linkId, status: "PENDING" } });
+    if (!open) {
+      const req = await db.changeRequest.create({
+        data: { kind: "UNLINK", personId: returnTo, linkId, linkKind: kind, reason: "-", proposedById: user!.id },
+      });
+      await audit(user, "propose-unlink", "Person", returnTo, { changeRequest: req.id, kind });
+    }
+    revalidatePath("/", "layout");
+    redirect({ href: `/person/${returnTo}?proposed=1`, locale: await getLocale() });
+  }
   if (kind === "couple") await db.couple.delete({ where: { id: linkId } });
   else await db.parentChild.delete({ where: { id: linkId } });
   await syncAround(link[0]);
