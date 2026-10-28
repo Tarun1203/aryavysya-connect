@@ -90,6 +90,8 @@ async function deliver(phone: string, code: string): Promise<boolean> {
 export async function sendCode(phone: string, purpose: OtpPurpose, userId: string | null, ipHash: string): Promise<SendResult> {
   if (!otpAvailable()) return { ok: false, reason: "notConfigured" };
   const now = Date.now();
+  // Request logs are kept for 30 days only (privacy notice, "How long we keep it")
+  await db.otpChallenge.deleteMany({ where: { createdAt: { lt: new Date(now - 30 * 24 * 3600e3) } } });
   const day = new Date(now - 24 * 3600e3);
   const [recent, fromIp, sentToday] = await Promise.all([
     db.otpChallenge.findMany({ where: { phone, createdAt: { gte: day } }, select: { createdAt: true }, orderBy: { createdAt: "desc" } }),

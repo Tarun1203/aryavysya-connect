@@ -72,6 +72,24 @@ enum ChangeStatus {
   WITHDRAWN
 }
 
+/// What a grievance is about (DPDP Act 2023: the rights of a Data Principal, and complaints)
+enum GrievanceKind {
+  ACCESS
+  CORRECTION
+  ERASURE
+  CONSENT
+  NOMINATION
+  CHILD_SAFETY
+  COMPLAINT
+  OTHER
+}
+
+enum GrievanceStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
 /// Why a one-time code was sent
 enum OtpPurpose {
   /// Signing in with a verified phone number
@@ -595,4 +613,34 @@ model ChangeRequest {
   @@index([personId, status])
   @@index([status, createdAt])
   @@index([proposedById])
+}
+
+/**
+ * A request or complaint to the Grievance Officer (privacy notice, /grievance). Anyone may send
+ * one, signed in or not; it is answered within 30 days (dueAt). See src/app/actions/grievance.ts.
+ */
+model Grievance {
+  id            String          @id @default(cuid())
+  /// Shown to the sender as their reference, e.g. G-000123
+  number        Int             @unique @default(autoincrement())
+  kind          GrievanceKind
+  status        GrievanceStatus @default(OPEN)
+  name          String
+  /// Email or phone to reply to
+  contact       String
+  /// The member who sent it, when signed in
+  userId        String?
+  /// The record it is about, if any (member code or link given by the sender)
+  aboutText     String?
+  message       String
+  /// HMAC of the sender's IP, for the per-IP limit
+  ipHash        String?
+  dueAt         DateTime
+  response      String?
+  respondedById String?
+  respondedAt   DateTime?
+  createdAt     DateTime        @default(now())
+
+  @@index([status, dueAt])
+  @@index([ipHash, createdAt])
 }

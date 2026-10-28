@@ -80,7 +80,8 @@
     "passwordHint": "At least 8 characters",
     "localOrg": "Local sangha / sabha",
     "localOrgHint": "Optional – they endorse you first",
-    "localOrgNone": "Not a member of a local body"
+    "localOrgNone": "Not a member of a local body",
+    "under18": "You must be 18 or over to register. Children are added to the family tree by their parents."
   },
   "person": {
     "givenName": "Given name",
@@ -370,7 +371,8 @@
     "notFound": "Not found",
     "removeConfirm": "Yes, remove this gotra",
     "eyebrow": "Stewards of the tree",
-    "tabReviews": "Reviews"
+    "tabReviews": "Reviews",
+    "tabGrievances": "Grievances"
   },
   "errors": {
     "required": "Please fill in the required fields",
@@ -537,7 +539,8 @@
     "privacy": "Privacy",
     "iconCredit": "3D icons: 3dicons (CC0)",
     "maintained": "Maintained with the district in-charges, local sanghas & sabhas and state Mahasabhas",
-    "blessing": "Om Sri Vasavi Kanyaka Parameswari Namaha"
+    "blessing": "Om Sri Vasavi Kanyaka Parameswari Namaha",
+    "legal": "Legal"
   },
   "merge": {
     "title": "Merge a duplicate record into this one",
@@ -701,5 +704,78 @@
     "nonePending": "Nothing is waiting for review.",
     "aboutYou": "Changes proposed to your record",
     "myRequests": "Your requests and disputes"
+  },
+  "legal": {
+    "eyebrow": "Your data, your family",
+    "updated": "Last updated {date}",
+    "notConfigured": "The organisation's name and the Grievance Officer's contact details have not been published yet. Until they are, use the grievance form below.",
+    "inBrief": "In brief",
+    "englishApplies": "The full text below is in English for now, and the English text is the one that applies.",
+    "privacyTitle": "Privacy notice",
+    "termsTitle": "Terms of use",
+    "childSafetyTitle": "Child safety",
+    "grievanceTitle": "Grievances",
+    "privacySummary": [
+      "We collect your account details, your membership request and the family-tree records you and your family add – nothing like Aadhaar, bank details or location, and no trackers.",
+      "Only verified members see the trees; children and anyone who withdraws consent are shown as \"Private\" outside the family.",
+      "Your data is never sold or used for advertising. Hosting and database providers process it for us, outside India (Singapore).",
+      "You can see, correct, dispute or erase your record, withdraw consent and complain – answered within 30 days.",
+      "One sign-in cookie only. SMS code logs are deleted after 30 days."
+    ],
+    "termsSummary": [
+      "For Arya Vysya community members aged 18 and over; membership is endorsed locally and confirmed by the district in-charge.",
+      "Add only your real relatives with true details; respect anyone who asks not to be included.",
+      "Some changes go for review; if a record is wrong, raise a dispute.",
+      "No false information, harassment, or copying other people's details.",
+      "The marriage check is a reference, not a decision – families and elders decide."
+    ],
+    "childSafetySummary": [
+      "Under-18s (and people with no birth year who are not married or parents) are \"Private\" outside the family.",
+      "They become visible only when a parent consents, and a parent can withdraw it at any time.",
+      "Only a parent can add a child's photo; it is hidden by default.",
+      "No tracking, advertising or messaging; children cannot register.",
+      "Worried about a child? Use the grievance form – child-safety reports come first. In danger: police 112, Childline 1098."
+    ],
+    "grievanceSummary": [
+      "Ask to see, correct or erase your data, withdraw consent, nominate someone, or complain – no account needed.",
+      "You get a reference number straight away and an answer within 30 days.",
+      "Child-safety reports are dealt with first.",
+      "If you are not satisfied, you may complain to the Data Protection Board of India."
+    ],
+    "readNotice": "Read the privacy notice.",
+    "formRequired": "Please fill in the required fields.",
+    "formTooLong": "The message is too long (5,000 characters at most).",
+    "formTooMany": "Too many requests from here today. Please try again tomorrow, or write to the Grievance Officer.",
+    "notAllowed": "You can't do this here.",
+    "responseRequired": "Write the answer given before marking it resolved.",
+    "formSent": "Sent. Your reference is {reference} – keep it to follow up. We will answer within 30 days.",
+    "formKind": "What is it about?",
+    "formChoose": "Choose…",
+    "kind_ACCESS": "See the data held about me",
+    "kind_CORRECTION": "Correct my or my family's details",
+    "kind_ERASURE": "Erase my data",
+    "kind_CONSENT": "Consent (give or withdraw)",
+    "kind_NOMINATION": "Nominate someone to act for me",
+    "kind_CHILD_SAFETY": "Child safety",
+    "kind_COMPLAINT": "Complaint",
+    "kind_OTHER": "Something else",
+    "formAbout": "Which record?",
+    "formAboutHint": "A member code such as AVC-000123, or a name and place",
+    "formName": "Your name",
+    "formContact": "Email or phone to reply to",
+    "formContactHint": "Used only to answer you",
+    "formMessage": "Your request or complaint",
+    "formSend": "Send",
+    "tabOpen": "Open",
+    "tabResolved": "Resolved",
+    "noneOpen": "Nothing here.",
+    "status_OPEN": "Open",
+    "status_IN_PROGRESS": "In progress",
+    "status_RESOLVED": "Resolved",
+    "overdue": "Overdue",
+    "due": "answer by {date}",
+    "signedIn": "sent while signed in",
+    "save": "Save",
+    "responsePlaceholder": "The answer given to the sender (needed to resolve)"
   }
 }

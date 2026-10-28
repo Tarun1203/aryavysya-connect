@@ -30,7 +30,15 @@ export async function Footer() {
       links: [
         { href: "/#how", label: t("footer.how") },
         { href: "/#features", label: t("footer.features") },
-        { href: "/#privacy", label: t("footer.privacy") },
+      ],
+    },
+    {
+      title: t("footer.legal"),
+      links: [
+        { href: "/privacy", label: t("legal.privacyTitle") },
+        { href: "/terms", label: t("legal.termsTitle") },
+        { href: "/child-safety", label: t("legal.childSafetyTitle") },
+        { href: "/grievance", label: t("legal.grievanceTitle") },
       ],
     },
   ];
@@ -38,7 +46,7 @@ export async function Footer() {
   return (
     <footer className="relative mt-24 overflow-hidden border-t border-line bg-surface-2/60">
       <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent" />
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 pb-8 pt-14 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 pb-8 pt-14 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr_1fr]">
         <div className="flex flex-col gap-4">
           <Link href="/" className="flex items-center gap-3">
             <LogoMark className="size-11" />

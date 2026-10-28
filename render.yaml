@@ -26,3 +26,14 @@ services:
         sync: false
       - key: MSG91_OTP_TEMPLATE_ID # MSG91 → OTP → Templates (DLT-approved, contains ##OTP##)
         sync: false
+      # Shown on the privacy notice, terms and grievance pages (Data Fiduciary and Grievance Officer)
+      - key: LEGAL_ORG_NAME
+        sync: false
+      - key: LEGAL_ORG_ADDRESS
+        sync: false
+      - key: GRIEVANCE_OFFICER_NAME
+        sync: false
+      - key: GRIEVANCE_EMAIL
+        sync: false
+      - key: GRIEVANCE_PHONE # optional
+        sync: false

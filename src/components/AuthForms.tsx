@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { loginAction, registerAction } from "@/app/actions/auth";
 import type { GotraOption, Option } from "@/lib/reference";
 import { Button, Card, Field, Input, Notice, Select, Textarea } from "./ui";
@@ -113,7 +114,12 @@ export function RegisterForm({
       {/* DPDP Act 2023: consent per purpose, each ticked on its own */}
       <Card className="flex flex-col gap-3 text-sm">
         <h2 className="font-semibold">{t("consent.registrationTitle")}</h2>
-        <p className="text-muted">{t("consent.registrationNotice")}</p>
+        <p className="text-muted">
+          {t("consent.registrationNotice")}{" "}
+          <Link href="/privacy" target="_blank" className="text-brand underline">
+            {t("legal.readNotice")}
+          </Link>
+        </p>
         <label className="flex items-start gap-2">
           <input type="checkbox" name="consentMembership" required className="mt-0.5 size-4 accent-brand" />
           <span>{t("consent.agreeMembership")}</span>

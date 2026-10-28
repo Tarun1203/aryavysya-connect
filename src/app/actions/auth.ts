@@ -57,6 +57,8 @@ export async function registerAction(_: FormState, fd: FormData): Promise<FormSt
   });
   if (!parsed.success) return { error: t("errors.required") };
   const d = parsed.data;
+  // Only adults register; children are in the tree under their parents (terms, child safety)
+  if (d.birthYear && new Date().getFullYear() - d.birthYear < 18) return { error: t("auth.under18") };
   // DPDP: membership and family-tree consent, each ticked separately
   if (fd.get("consentMembership") !== "on" || fd.get("consentTree") !== "on") return { error: t("consent.requiredAtRegistration") };
   if (await db.user.findUnique({ where: { email: d.email } })) return { error: t("auth.emailTaken") };
