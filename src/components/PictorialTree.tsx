@@ -64,8 +64,12 @@ const short = (s: string, n = 16) => (s.length > n ? s.slice(0, n - 1) + "…" :
 
 function Medallion({ p, cx, cy, r, focus, href }: { p: TreeNode; cx: number; cy: number; r: number; focus?: boolean; href: string }) {
   return (
-    // A private person has no link to follow
-    <a href={p.private ? undefined : href} aria-label={`${p.givenName} ${p.surname}`}>
+    // A private person has no link to follow, and no name for the tree's find box
+    <a
+      href={p.private ? undefined : href}
+      aria-label={`${p.givenName} ${p.surname}`}
+      data-name={p.private ? undefined : [p.givenName, p.surname, p.givenNameLocal, p.surnameLocal].filter(Boolean).join(" ")}
+    >
       <title>{`${p.givenName} ${p.surname}${year(p.birthDate) ? ` · ${year(p.birthDate)}` : ""}`}</title>
       {focus && <circle cx={cx} cy={cy} r={r + 7} fill="none" stroke="var(--color-foreground)" strokeWidth={3} />}
       <circle
