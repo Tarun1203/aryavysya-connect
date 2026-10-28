@@ -379,7 +379,10 @@
   "errors": {
     "required": "Please fill in the required fields",
     "notFound": "Not found",
-    "forbidden": "You do not have access to this page."
+    "forbidden": "You do not have access to this page.",
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "This page doesn't exist, or it has moved.",
+    "goHome": "Go to the home page"
   },
   "locations": {
     "state": "State",
