@@ -263,6 +263,7 @@ model User {
   id              String     @id @default(cuid())
   name            String
   email           String     @unique
+  /// @encrypted(deterministic) – looked up when signing in with a code (src/lib/encryption.ts)
   phone           String?
   /// Set once the member proved the number with a one-time code; only verified numbers can sign in
   phoneVerifiedAt DateTime?
@@ -561,6 +562,7 @@ model Consent {
 model OtpChallenge {
   id         String     @id @default(cuid())
   /// Digits with the country code, e.g. 919876543210
+  /// @encrypted(deterministic)
   phone      String
   purpose    OtpPurpose
   userId     String?
@@ -627,11 +629,13 @@ model Grievance {
   status        GrievanceStatus @default(OPEN)
   name          String
   /// Email or phone to reply to
+  /// @encrypted
   contact       String
   /// The member who sent it, when signed in
   userId        String?
   /// The record it is about, if any (member code or link given by the sender)
   aboutText     String?
+  /// @encrypted
   message       String
   /// HMAC of the sender's IP, for the per-IP limit
   ipHash        String?
