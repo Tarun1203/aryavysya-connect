@@ -10,6 +10,7 @@ import { LocationPicker, type PickedLocation } from "./LocationPicker";
 import { GotraSelect } from "./GotraSelect";
 import { DuplicateList } from "./DuplicateList";
 import { MarriageFlags } from "./MarriageFlags";
+import { SpellingSuggest } from "./SpellingSuggest";
 
 export type PersonDefaults = Partial<{
   givenName: string;
@@ -81,6 +82,7 @@ export function PersonForm({ action, defaults = {}, gotras, places = { native: {
         <Field label={t("surnameLocal")}>
           <Input name="surnameLocal" defaultValue={d("surnameLocal")} />
         </Field>
+        <SpellingSuggest from={["givenName", "surname"]} to={["givenNameLocal", "surnameLocal"]} />
         <div className="sm:col-span-2">
           <Field label={t("aliases")} hint={t("aliasesHint")}>
             <Input name="aliases" defaultValue={defaults.aliases?.join(", ") ?? ""} />

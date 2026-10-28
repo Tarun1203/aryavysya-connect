@@ -9,6 +9,7 @@ import { LocationPicker } from "@/components/LocationPicker";
 import { GotraSelect } from "@/components/GotraSelect";
 import { Button, Card, Field, Input, PageTitle } from "@/components/ui";
 import { privateIds, privateViewer } from "@/lib/consent";
+import { idsMatchingScriptWord } from "@/lib/translit-db";
 
 type Search = {
   q?: string;
@@ -47,16 +48,19 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
   const words = (sp.q ?? "").trim().split(/\s+/).filter(Boolean).slice(0, 4);
   const searched =
     words.length > 0 || !!sp.gotra || !!sp.place || !!sp.state || !!sp.districtId || !!sp.talukId || !!sp.localityId || (sp.pin?.length ?? 0) === 6;
+  // A word typed in Telugu, Kannada or Tamil also finds people entered only in English
+  const viaScript = await Promise.all(words.map((w) => idsMatchingScriptWord(w)));
   const found = searched
     ? await db.person.findMany({
         where: {
           AND: [
-            ...words.map((w) => ({
+            ...words.map((w, i) => ({
               OR: [
                 { givenName: { contains: w, mode: "insensitive" as const } },
                 { surname: { contains: w, mode: "insensitive" as const } },
                 { givenNameLocal: { contains: w } },
                 { surnameLocal: { contains: w } },
+                ...(viaScript[i].length ? [{ id: { in: viaScript[i] } }] : []),
               ],
             })),
             sp.gotra ? { OR: [{ gotraId: sp.gotra }, { birthGotraId: sp.gotra }] } : {},

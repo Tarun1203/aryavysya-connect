@@ -848,5 +848,14 @@
     "tooLarge": "The file is larger than 900 KB. Split it into parts.",
     "notUtf8": "The file is not UTF-8. Export it again as UTF-8 GEDCOM.",
     "failed": "The import failed. Nothing was saved."
+  },
+  "translit": {
+    "script": "Script",
+    "suggest": "Fill in from the English name",
+    "replace": "Replace “{old}” with “{new}”?",
+    "needEnglish": "Type the name in English first.",
+    "confidence_verified": "Checked spelling.",
+    "confidence_community": "Spelling used by other members – please check.",
+    "confidence_guess": "A best guess – please check and correct the spelling."
   }
 }
