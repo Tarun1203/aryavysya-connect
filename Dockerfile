@@ -30,7 +30,8 @@ COPY --from=build --chown=app:app /app/prisma ./prisma
 # The seed script (run on boot) imports src/lib/db.ts via the tsconfig "@/" alias
 COPY --from=build --chown=app:app /app/tsconfig.json ./
 COPY --from=build --chown=app:app /app/src/generated ./src/generated
-COPY --from=build --chown=app:app /app/src/lib/db.ts /app/src/lib/db-url.ts ./src/lib/
+# …and db.ts imports the field-encryption modules beside it, so copy the whole folder
+COPY --from=build --chown=app:app /app/src/lib ./src/lib
 COPY --from=build --chown=app:app /app/scripts/start.sh ./scripts/start.sh
 USER app
 EXPOSE 3000
