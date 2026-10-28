@@ -26,6 +26,11 @@ services:
         sync: false
       - key: MSG91_OTP_TEMPLATE_ID # MSG91 → OTP → Templates (DLT-approved, contains ##OTP##)
         sync: false
+      # Field encryption: "k1:<32 random bytes, base64>" – back the key up; then run `npm run encryption:backfill`
+      - key: FIELD_ENCRYPTION_KEYS
+        sync: false
+      - key: FIELD_ENCRYPTION_CURRENT
+        sync: false
       # Shown on the privacy notice, terms and grievance pages (Data Fiduciary and Grievance Officer)
       - key: LEGAL_ORG_NAME
         sync: false
