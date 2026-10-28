@@ -1,8 +1,10 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
-import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+
+// Password hashing lives in password.ts (argon2id, bcrypt still verified), shared with the seed
+export { hashPassword, needsRehash, verifyPassword } from "./password";
 
 const COOKIE = "vamsha_session";
 const MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -11,14 +13,6 @@ function secret() {
   const s = process.env.AUTH_SECRET;
   if (!s || s === "change-me") throw new Error("AUTH_SECRET is not configured");
   return new TextEncoder().encode(s);
-}
-
-export async function hashPassword(password: string) {
-  return bcrypt.hash(password, 10);
-}
-
-export async function verifyPassword(password: string, hash: string) {
-  return bcrypt.compare(password, hash);
 }
 
 export async function startSession(userId: string) {
