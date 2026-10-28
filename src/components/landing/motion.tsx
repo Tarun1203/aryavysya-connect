@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ComponentProps, type MouseEvent, type ReactNode } from "react";
-import { animate, motion, useInView, useMotionTemplate, useMotionValue, useScroll, useSpring, useTransform } from "motion/react";
+import { animate, motion, useInView, useMotionTemplate, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
 
 /** Fades and lifts its children into place the first time they scroll into view. */
 export function Reveal({ children, delay = 0, className = "", y = 18 }: { children: ReactNode; delay?: number; className?: string; y?: number }) {
@@ -18,16 +18,20 @@ export function Reveal({ children, delay = 0, className = "", y = 18 }: { childr
   );
 }
 
-/** Counts up from 0 once visible, formatted for the page's language. */
+/**
+ * Counts up from 0 once visible, formatted for the page's language. The page itself carries the
+ * real number, so search engines, link previews and visitors without JavaScript never see 0.
+ */
 export function CountUp({ value, locale }: { value: number; locale: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true });
-  const [shown, setShown] = useState(0);
+  const reduced = useReducedMotion();
+  const [shown, setShown] = useState(value);
   useEffect(() => {
-    if (!inView) return;
+    if (!inView || reduced) return;
     const controls = animate(0, value, { duration: 1.6, ease: [0.16, 1, 0.3, 1], onUpdate: (v) => setShown(Math.round(v)) });
     return () => controls.stop();
-  }, [inView, value]);
+  }, [inView, reduced, value]);
   return (
     <span ref={ref} className="tabular-nums">
       {shown.toLocaleString(locale)}
