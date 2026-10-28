@@ -24,7 +24,7 @@ export async function ConsentCard({ personId, name, panel, showHistory }: { pers
         <h2 className="font-semibold">{t("cardTitle")}</h2>
         <Badge tone={panel.hidden ? "muted" : "brand"}>{status}</Badge>
       </div>
-      <p className="text-sm text-muted">{panel.minor ? (panel.treeActive ? t("minorGiven") : t("minorMissing")) : panel.hidden ? t("adultWithdrawn") : t("adultListed")}</p>
+      <p className="text-sm text-muted">{panel.minor ? (panel.treeActive ? t("minorGiven") : panel.ageUnknown ? t("ageUnknown") : t("minorMissing")) : panel.hidden ? t("adultWithdrawn") : t("adultListed")}</p>
 
       {panel.canGiveAsGuardian && !panel.treeActive && (
         <ActionForm action={giveGuardianConsentAction.bind(null, personId)} submit={t("giveAsParent")} className="flex flex-col gap-3">

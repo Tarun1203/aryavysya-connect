@@ -7,7 +7,18 @@ import { db } from "@/lib/db";
 import { currentUser, startSession } from "@/lib/auth";
 import { audit } from "@/lib/permissions";
 import { str } from "@/lib/forms";
-import { checkCode, maskPhone, normalizePhone, sendCode, type SendResult } from "@/lib/otp";
+import { headers } from "next/headers";
+import { checkCode, hashIp, maskPhone, normalizePhone, sendCode, type SendResult } from "@/lib/otp";
+
+/**
+ * The client's IP for the per-IP limit. Behind Render's proxy the last X-Forwarded-For entry is
+ * the address the proxy saw; earlier entries can be set by the client, so they aren't trusted.
+ */
+async function requesterIp() {
+  const h = await headers();
+  const chain = (h.get("x-forwarded-for") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  return hashIp(chain.at(-1) ?? h.get("x-real-ip") ?? "local");
+}
 
 /** Two steps: ask for the number, then for the code sent to it. `phone` is carried between them. */
 export type OtpState = { step: "phone" | "code"; phone?: string; sentTo?: string; error?: string; info?: string; ok?: boolean } | undefined;
@@ -18,17 +29,18 @@ async function sendError(r: Exclude<SendResult, { ok: true }>) {
 }
 
 /**
- * Sign-in, step 1. A code goes only to a number a member has verified; the answer is the same
- * whether or not the number is registered, so the form can't be used to find members' numbers.
+ * Sign-in, step 1. A code goes only to a number a member has verified. Unknown numbers go through
+ * the same limits and get the same answers (a failed SMS shows as sent too, and is logged), so
+ * the form can't be used to find members' numbers.
  */
 export async function sendLoginCodeAction(_: OtpState, fd: FormData): Promise<OtpState> {
   const t = await getTranslations("otp");
   const phone = normalizePhone(str(fd, "phone"));
   if (!phone) return { step: "phone", error: t("invalidPhone") };
   const user = await db.user.findFirst({ where: { phone, phoneVerifiedAt: { not: null } }, select: { id: true } });
-  if (user) {
-    const sent = await sendCode(phone, "LOGIN", user.id);
-    if (!sent.ok) return { step: sent.reason === "wait" ? "code" : "phone", phone, sentTo: maskPhone(phone), error: await sendError(sent) };
+  const sent = await sendCode(phone, "LOGIN", user?.id ?? null, await requesterIp());
+  if (!sent.ok && sent.reason !== "sendFailed") {
+    return { step: sent.reason === "wait" ? "code" : "phone", phone, sentTo: maskPhone(phone), error: await sendError(sent) };
   }
   return { step: "code", phone, sentTo: maskPhone(phone), info: t("sentIfRegistered", { phone: maskPhone(phone) }) };
 }
@@ -56,10 +68,9 @@ export async function sendVerifyCodeAction(_: OtpState, fd: FormData): Promise<O
   if (!user) return { step: "phone", error: t("signInFirst") };
   const phone = normalizePhone(str(fd, "phone"));
   if (!phone) return { step: "phone", error: t("invalidPhone") };
-  // One verified number per member, and one member per verified number
-  const taken = await db.user.findFirst({ where: { phone, phoneVerifiedAt: { not: null }, id: { not: user.id } }, select: { id: true } });
-  if (taken) return { step: "phone", error: t("phoneTaken") };
-  const sent = await sendCode(phone, "VERIFY_PHONE", user.id);
+  // Whether another member has this number is said only after the code proves it's yours
+  // (confirmVerifyCodeAction), so this form can't be used to look up members' numbers
+  const sent = await sendCode(phone, "VERIFY_PHONE", user.id, await requesterIp());
   if (!sent.ok) return { step: sent.reason === "wait" ? "code" : "phone", phone, sentTo: maskPhone(phone), error: await sendError(sent) };
   return { step: "code", phone, sentTo: maskPhone(phone), info: t("sent", { phone: maskPhone(phone) }) };
 }

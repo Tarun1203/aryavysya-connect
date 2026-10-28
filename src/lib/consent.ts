@@ -2,16 +2,17 @@ import "server-only";
 import { db } from "./db";
 import type { SessionUser } from "./auth";
 import { adminScope, canEditPerson, canView, editableIds } from "./permissions";
-import { isMinor } from "./photo";
+import { ageFacts, needsGuardian } from "./photo";
 import type { ConsentBasis, ConsentPurpose } from "@/generated/prisma/client";
 
 /**
  * Consent records (DPDP Act 2023). Consent is recorded per purpose with who gave it and when,
  * and can be withdrawn; nothing is ever edited in place. The rules:
  *  - A member consents for themselves when they register (membership + family tree).
- *  - A living minor (under 18) is shown to members outside their family only once a parent has
- *    consented as guardian, through their own verified account, or an administrator has recorded
- *    a signed paper form from the guardian. Until then they appear as "Private".
+ *  - A living minor (under 18 – or with no birth year and neither married nor a parent, see
+ *    needsGuardian) is shown to members outside their family only once a parent has consented as
+ *    guardian, through their own verified account, or an administrator has recorded a signed
+ *    paper form from the guardian. Until then they appear as "Private".
  *  - An adult added by their family stays listed unless consent for the family tree is withdrawn
  *    (by them, once registered, or by an administrator on their request).
  */
@@ -55,11 +56,12 @@ export async function privateIds(people: Subject[]): Promise<Set<string>> {
     where: { personId: { in: living.map((p) => p.id) }, purpose: "FAMILY_TREE" },
     select: { personId: true, basis: true, withdrawnAt: true },
   });
+  const facts = await ageFacts(living.filter((p) => !p.birthDate).map((p) => p.id));
   const out = new Set<string>();
   for (const p of living) {
     const mine = consents.filter((c) => c.personId === p.id);
     const current = mine.filter((c) => !c.withdrawnAt);
-    if (isMinor(p) ? !current.some((c) => c.basis !== "SELF") : mine.length > 0 && current.length === 0) out.add(p.id);
+    if (needsGuardian(p, facts.get(p.id)) ? !current.some((c) => c.basis !== "SELF") : mine.length > 0 && current.length === 0) out.add(p.id);
   }
   return out;
 }
@@ -122,13 +124,15 @@ export async function consentPanel(user: SessionUser | null, personId: string) {
     include: { givenBy: { select: { name: true } }, withdrawnBy: { select: { name: true } } },
     orderBy: { givenAt: "desc" },
   });
-  const minor = isMinor(p);
+  const minor = needsGuardian(p, p.birthDate ? undefined : (await ageFacts([personId])).get(personId));
   const self = p.user?.id === user.id;
   const parent = !!user.personId && p.asChild.some((l) => l.parentId === user.personId);
   const admin = !!(await adminScope(user)) && user.role !== "MEMBER" && (await canEditPerson(user, personId));
   const treeActive = records.some((r) => r.purpose === "FAMILY_TREE" && !r.withdrawnAt && (!minor || r.basis !== "SELF"));
   return {
     minor,
+    // Treated as a minor only because no birth year is recorded
+    ageUnknown: minor && !p.birthDate,
     records,
     treeActive,
     hidden: (await privateIds([{ id: personId, isLiving: p.isLiving, birthDate: p.birthDate }])).has(personId),

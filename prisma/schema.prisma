@@ -507,15 +507,18 @@ model Consent {
 
 /**
  * A one-time code sent by SMS (MSG91). Only a hash of the code is stored; it expires, allows a few
- * attempts, and is used once. See src/lib/otp.ts.
+ * attempts, and is used once. A request for a number no member has verified is logged too (no
+ * user, no code, nothing sent), so the limits and replies are the same whoever asks. See src/lib/otp.ts.
  */
 model OtpChallenge {
   id         String     @id @default(cuid())
   /// Digits with the country code, e.g. 919876543210
   phone      String
   purpose    OtpPurpose
-  userId     String
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// HMAC of the requester's IP address (never the address itself), for the per-IP limit
+  ipHash     String?
   codeHash   String
   attempts   Int        @default(0)
   expiresAt  DateTime
@@ -524,4 +527,6 @@ model OtpChallenge {
 
   @@index([phone, createdAt])
   @@index([userId, createdAt])
+  @@index([ipHash, createdAt])
+  @@index([createdAt])
 }

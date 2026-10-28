@@ -7,13 +7,15 @@ import type { MarriageRule } from "@/generated/prisma/client";
  *  - birth gotra (puttinti): the father's, never changed by marriage
  *  - own gotra (swa): the birth gotra – except a married woman takes her husband's
  *  - mother's gotra: the mother's birth gotra
- * People enter the birth and mother's gotra; the own gotra is derived here, so it follows
- * marriages being confirmed or ending. Call after anything that changes a person, a parent link
- * or a marriage.
+ * When the father (or mother) is in the tree with a gotra, the birth (or mother's) gotra comes
+ * from them and follows corrections to theirs; what was typed in is used only while that parent
+ * is missing. The own gotra follows marriages being confirmed or ending. Call after anything that
+ * changes a person, a parent link or a marriage. Returns the ids whose gotras changed.
  */
-export async function syncGotras(personIds: string[]) {
+export async function syncGotras(personIds: string[]): Promise<string[]> {
   const ids = [...new Set(personIds)];
-  if (!ids.length) return;
+  if (!ids.length) return [];
+  const changed: string[] = [];
   const people = await db.person.findMany({
     where: { id: { in: ids } },
     include: {
@@ -26,9 +28,10 @@ export async function syncGotras(personIds: string[]) {
   for (const p of people) {
     const father = p.asChild.map((l) => l.parent).find((x) => x.gender === "MALE");
     const mother = p.asChild.map((l) => l.parent).find((x) => x.gender === "FEMALE");
-    // A child's gotras come from the parents when they are known; anything typed in stays until then
-    const birth = p.birthGotraId ?? father?.gotraId ?? p.gotraId;
-    const maternal = p.maternalGotraId ?? mother?.birthGotraId ?? mother?.gotraId ?? null;
+    // A child's gotras come from the parents when they are known; anything typed in stays until then.
+    // The father's birth gotra (his own one), and the mother's birth gotra – not her married one.
+    const birth = father?.birthGotraId ?? father?.gotraId ?? p.birthGotraId ?? p.gotraId;
+    const maternal = mother?.birthGotraId ?? p.maternalGotraId ?? null;
 
     let own = birth;
     if (p.gender === "FEMALE") {
@@ -45,19 +48,44 @@ export async function syncGotras(personIds: string[]) {
     }
     if (own !== p.gotraId || birth !== p.birthGotraId || maternal !== p.maternalGotraId) {
       await db.person.update({ where: { id: p.id }, data: { gotraId: own, birthGotraId: birth, maternalGotraId: maternal } });
+      changed.push(p.id);
     }
   }
+  return changed;
 }
 
-/** Everyone whose derived gotras may change when `personId` changes: them, their spouses and children. */
-export async function syncAround(personId: string) {
-  const [kids, couples] = await Promise.all([
-    db.parentChild.findMany({ where: { parentId: personId }, select: { childId: true } }),
-    db.couple.findMany({ where: { OR: [{ person1Id: personId }, { person2Id: personId }] }, select: { person1Id: true, person2Id: true } }),
-  ]);
-  // Spouses first (a wife's gotra follows her husband's), then the children (theirs follow the parents)
-  await syncGotras([personId, ...couples.flatMap((c) => [c.person1Id, c.person2Id])]);
-  await syncGotras(kids.map((k) => k.childId));
+const spousesOfIds = async (ids: string[]) =>
+  (await db.couple.findMany({ where: { OR: [{ person1Id: { in: ids } }, { person2Id: { in: ids } }] }, select: { person1Id: true, person2Id: true } }))
+    .flatMap((c) => [c.person1Id, c.person2Id])
+    .filter((id) => !ids.includes(id));
+
+/**
+ * Re-derive the gotras of everyone a change to `personId` can reach: them and their spouses, then
+ * down the generations – children, their spouses, grandchildren… – following only the branches
+ * where something changed, so a corrected grandparent's gotra reaches every descendant.
+ */
+export async function syncAround(personId: string, maxGenerations = 15) {
+  // The person first, then their spouses (a wife's own gotra follows her husband's)
+  const top = await syncGotras([personId]);
+  const spouses = await spousesOfIds([personId]);
+  const topSpouses = await syncGotras(spouses);
+  // The children are always checked once (a link may have just been added); deeper only on change
+  let parents = [personId, ...spouses];
+  let changedAbove = new Set([...top, ...topSpouses, personId]);
+  const seen = new Set(parents);
+  for (let g = 0; g < maxGenerations && parents.length; g++) {
+    const links = await db.parentChild.findMany({ where: { parentId: { in: [...changedAbove] } }, select: { childId: true } });
+    const kids = [...new Set(links.map((l) => l.childId))].filter((id) => !seen.has(id));
+    if (!kids.length) break;
+    kids.forEach((id) => seen.add(id));
+    const changedKids = await syncGotras(kids);
+    // Spouses of those whose gotra changed (a wife married into the family takes her husband's)
+    const theirSpouses = (await spousesOfIds(changedKids)).filter((id) => !seen.has(id));
+    theirSpouses.forEach((id) => seen.add(id));
+    const changedSpouses = await syncGotras(theirSpouses);
+    parents = kids;
+    changedAbove = new Set([...changedKids, ...changedSpouses]);
+  }
 }
 
 export type Rules = Pick<MarriageRule, "sagotra" | "maternalGotra" | "menarikam" | "keepGotraAfterMarriageEnds">;
