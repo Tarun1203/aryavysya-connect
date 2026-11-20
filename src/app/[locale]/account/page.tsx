@@ -11,6 +11,7 @@ import { ChangeRequestList, requestInclude } from "@/components/ChangeRequestLis
 import { confirmVerifyCodeAction, sendVerifyCodeAction } from "@/app/actions/otp";
 import { maskPhone, otpAvailable } from "@/lib/otp";
 import { MarriageRequests } from "@/components/MarriageRequests";
+import { NotifySettingsCard } from "@/components/NotifySettingsCard";
 
 export default async function AccountPage({ params }: PageProps<"/[locale]/account">) {
   const { locale } = await params;
@@ -98,6 +99,8 @@ export default async function AccountPage({ params }: PageProps<"/[locale]/accou
           </details>
         </Card>
       )}
+
+      <NotifySettingsCard user={u} />
 
       {/* Where you're signed in: every live session, with sign-out buttons */}
       <Card className="flex flex-col gap-3">

@@ -9,6 +9,7 @@ import { str, type FormState } from "@/lib/forms";
 import { validLocality, validTaluk } from "@/lib/locations/resolve";
 import { syncGotras } from "@/lib/gotra";
 import { attachUserConsents } from "@/lib/consent";
+import { notify } from "@/lib/notify";
 import type { OrgLevel, Role } from "@/generated/prisma/client";
 
 async function admin() {
@@ -31,6 +32,7 @@ export async function endorseClaimAction(claimId: string) {
   if (!(await claimRights(u, claim)).endorse || claim.status !== "PENDING") return;
   await db.familyClaim.update({ where: { id: claimId }, data: { endorsedById: u.id, endorsedAt: new Date() } });
   await audit(u, "endorse", "FamilyClaim", claimId);
+  await notify([claim.userId], "CLAIM_ENDORSED", { by: u.name }, "/account", u.id);
   done();
 }
 
@@ -91,6 +93,7 @@ export async function approveClaimAction(claimId: string, _: FormState, fd: Form
   ]);
   await attachUserConsents(claim.userId, personId);
   await audit(u, "approve", "FamilyClaim", claimId, { personId, mode });
+  await notify([claim.userId], "CLAIM_APPROVED", { by: u.name }, `/person/${personId}`, u.id);
   return done();
 }
 
@@ -106,6 +109,7 @@ export async function rejectClaimAction(claimId: string, fd: FormData) {
     db.user.update({ where: { id: claim.userId }, data: { status: "REJECTED" } }),
   ]);
   await audit(u, "reject", "FamilyClaim", claimId);
+  await notify([claim.userId], "CLAIM_REJECTED", { by: u.name }, "/account", u.id);
   done();
 }
 

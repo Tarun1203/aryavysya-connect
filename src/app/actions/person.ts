@@ -15,6 +15,7 @@ import { rulesFor, syncAround } from "@/lib/gotra";
 import { mergePeople, mergeProblem } from "@/lib/merge";
 import { privateIds, privateViewer } from "@/lib/consent";
 import { diff, editNeedsReview, unlinkNeedsReview } from "@/lib/review";
+import { changeDeciders, familyOf, notify } from "@/lib/notify";
 import type { Prisma } from "@/generated/prisma/client";
 
 export async function updatePersonAction(personId: string, _: FormState, fd: FormData): Promise<FormState> {
@@ -34,6 +35,7 @@ export async function updatePersonAction(personId: string, _: FormState, fd: For
     if (!reason) return { error: t("review.reasonRequired") };
     const req = await db.changeRequest.create({ data: { kind: "EDIT", personId, changes: changes as Prisma.InputJsonValue, reason, proposedById: user!.id } });
     await audit(user, "propose-edit", "Person", personId, { changeRequest: req.id, fields: Object.keys(changes) });
+    await notify(await changeDeciders(personId, "EDIT"), "CHANGE_PROPOSED", { name: `${before.givenName} ${before.surname}`, by: user!.name }, `/person/${personId}`, user!.id);
     revalidatePath("/", "layout");
     redirect({ href: `/person/${personId}?proposed=1`, locale: await getLocale() });
   }
@@ -170,6 +172,11 @@ export async function linkExistingAction(anchorId: string, relation: Relation, _
   }
   await syncAround(anchorId);
   await syncAround(otherId);
+  if (proposed) {
+    // The other family answers: the person and their relatives who may edit them
+    const [a, b] = await Promise.all([anchorId, otherId].map((id) => db.person.findUnique({ where: { id }, select: { givenName: true, surname: true } })));
+    await notify(await familyOf(otherId), "MARRIAGE_PROPOSED", { name: a ? `${a.givenName} ${a.surname}` : "", other: b ? `${b.givenName} ${b.surname}` : "" }, `/person/${otherId}`, user!.id);
+  }
   await audit(user, proposed ? "propose-marriage" : `link-${relation}`, "Person", anchorId, {
     otherId,
     ...(relation === "spouse" && fd.get("confirmMatch") === "yes" ? { confirmedDespiteFlags: true } : {}),
@@ -200,6 +207,8 @@ export async function removeLinkAction(kind: "parentChild" | "couple", linkId: s
         data: { kind: "UNLINK", personId: returnTo, linkId, linkKind: kind, reason: "-", proposedById: user!.id },
       });
       await audit(user, "propose-unlink", "Person", returnTo, { changeRequest: req.id, kind });
+      const subject = await db.person.findUnique({ where: { id: returnTo }, select: { givenName: true, surname: true } });
+      await notify(await changeDeciders(returnTo, "UNLINK"), "CHANGE_PROPOSED", { name: subject ? `${subject.givenName} ${subject.surname}` : "", by: user!.name }, `/person/${returnTo}`, user!.id);
     }
     revalidatePath("/", "layout");
     redirect({ href: `/person/${returnTo}?proposed=1`, locale: await getLocale() });

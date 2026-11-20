@@ -294,20 +294,23 @@ model User {
   approvedAt   DateTime?
   createdAt    DateTime  @default(now())
 
-  claims             FamilyClaim[]   @relation("ClaimUser")
-  reviewedClaims     FamilyClaim[]   @relation("ClaimReviewer")
-  endorsedClaims     FamilyClaim[]   @relation("ClaimEndorser")
+  claims             FamilyClaim[]         @relation("ClaimUser")
+  reviewedClaims     FamilyClaim[]         @relation("ClaimReviewer")
+  endorsedClaims     FamilyClaim[]         @relation("ClaimEndorser")
   audit              AuditLog[]
-  marriagesProposed  Couple[]        @relation("MarriageProposer")
-  marriagesConfirmed Couple[]        @relation("MarriageConfirmer")
-  consents           Consent[]       @relation("ConsentSubject")
-  verifiedPeople     Person[]        @relation("PersonVerifier")
-  changesProposed    ChangeRequest[] @relation("ChangeProposer")
-  changesReviewed    ChangeRequest[] @relation("ChangeReviewer")
-  consentsGiven      Consent[]       @relation("ConsentGiver")
-  consentsWithdrawn  Consent[]       @relation("ConsentWithdrawer")
+  marriagesProposed  Couple[]              @relation("MarriageProposer")
+  marriagesConfirmed Couple[]              @relation("MarriageConfirmer")
+  consents           Consent[]             @relation("ConsentSubject")
+  verifiedPeople     Person[]              @relation("PersonVerifier")
+  changesProposed    ChangeRequest[]       @relation("ChangeProposer")
+  changesReviewed    ChangeRequest[]       @relation("ChangeReviewer")
+  consentsGiven      Consent[]             @relation("ConsentGiver")
+  consentsWithdrawn  Consent[]             @relation("ConsentWithdrawer")
   otpChallenges      OtpChallenge[]
   sessions           Session[]
+  notifications      Notification[]
+  notifySettings     NotificationSettings?
+  pushSubscriptions  PushSubscription[]
 }
 
 /// A member's request to be verified as belonging to a family.
@@ -688,4 +691,70 @@ model Session {
 
   @@index([userId, revokedAt])
   @@index([expiresAt])
+}
+
+/// What a notification is about. The words are in messages/*.json (notify.*), in the reader's language.
+enum NotificationKind {
+  CLAIM_SUBMITTED // a membership request to decide (administrators)
+  CLAIM_ENDORSED
+  CLAIM_APPROVED
+  CLAIM_REJECTED
+  CHANGE_PROPOSED // an edit, unlink or dispute to decide
+  CHANGE_APPROVED
+  CHANGE_REJECTED
+  MARRIAGE_PROPOSED // another family proposed a marriage to answer
+  MARRIAGE_ACCEPTED
+  MARRIAGE_DECLINED
+  GRIEVANCE_RESPONDED
+}
+
+/// One notification for one member (src/lib/notify.ts). Kept for 180 days.
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      NotificationKind
+  /// Values for the message: names and ids (shown in the site only – email and push never carry them)
+  data      Json             @default("{}")
+  /// Where it leads, a path inside the site ("/admin", "/person/…")
+  link      String?
+  readAt    DateTime?
+  emailedAt DateTime?
+  pushedAt  DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+/// Which channels a member wants, for two groups: things waiting for their decision (requests),
+/// and answers to things they asked for (decisions). The in-app feed always has everything.
+model NotificationSettings {
+  userId         String   @id
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailRequests  Boolean  @default(false)
+  emailDecisions Boolean  @default(true)
+  pushRequests   Boolean  @default(true)
+  pushDecisions  Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+}
+
+/// A browser that agreed to receive push notifications (Web Push, RFC 8291)
+model PushSubscription {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The push service URL for this browser – a capability, so stored encrypted
+  /// @encrypted(deterministic)
+  endpoint   String    @unique
+  /// @encrypted
+  p256dh     String
+  /// @encrypted
+  auth       String
+  /// "Chrome on Android" – shown to the member
+  device     String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  @@index([userId])
 }

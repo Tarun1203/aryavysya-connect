@@ -7,6 +7,7 @@ import { currentUser } from "@/lib/auth";
 import { audit, canView } from "@/lib/permissions";
 import { str, type FormState } from "@/lib/forms";
 import { applyEdit, canReview, isReviewer, removeLink } from "@/lib/review";
+import { changeDeciders, notify } from "@/lib/notify";
 
 const done = (): FormState => {
   revalidatePath("/", "layout");
@@ -48,6 +49,8 @@ export async function disputeAction(personId: string, _: FormState, fd: FormData
     },
   });
   await audit(user, "dispute", "Person", personId, { changeRequest: req.id, linkId });
+  const subject = await db.person.findUnique({ where: { id: personId }, select: { givenName: true, surname: true } });
+  await notify(await changeDeciders(personId, "DISPUTE"), "CHANGE_PROPOSED", { name: subject ? `${subject.givenName} ${subject.surname}` : "", by: user!.name }, `/person/${personId}`, user!.id);
   return done();
 }
 
@@ -75,6 +78,8 @@ export async function reviewAction(requestId: string, _: FormState, fd: FormData
     data: { status: decision === "approve" ? "APPROVED" : "REJECTED", reviewedById: user.id, reviewedAt: new Date(), reviewNote: note },
   });
   await audit(user, `review-${decision}`, "Person", req.personId, { changeRequest: req.id, kind: req.kind });
+  const subject = await db.person.findUnique({ where: { id: req.personId }, select: { givenName: true, surname: true } });
+  await notify([req.proposedById], decision === "approve" ? "CHANGE_APPROVED" : "CHANGE_REJECTED", { name: subject ? `${subject.givenName} ${subject.surname}` : "", note }, `/person/${req.personId}`, user.id);
   return done();
 }
 

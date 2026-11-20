@@ -38,6 +38,8 @@ export const RULES = {
   registerGlobal: { name: "register:all", limit: 200, windowSec: HOUR },
   // Family-tree downloads per account (a whole lineage each – generous for a family, not a scraper)
   gedcomExport: { name: "gedcom:export", limit: 20, windowSec: HOUR, backoff: steady },
+  // Notification emails per member: a busy day on the site can't flood an inbox
+  notifyEmail: { name: "notify:email", limit: 20, windowSec: HOUR },
 } satisfies Record<string, Rule>;
 
 function keyFor(rule: Rule, subject: string) {

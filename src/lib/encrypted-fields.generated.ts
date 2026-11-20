@@ -12,6 +12,11 @@ export const FIELD_MAP: FieldMap = {
     "Grievance": {
       "contact": "randomized",
       "message": "randomized"
+    },
+    "PushSubscription": {
+      "endpoint": "deterministic",
+      "p256dh": "randomized",
+      "auth": "randomized"
     }
   },
   "relations": {
@@ -72,7 +77,10 @@ export const FIELD_MAP: FieldMap = {
       "consentsGiven": "Consent",
       "consentsWithdrawn": "Consent",
       "otpChallenges": "OtpChallenge",
-      "sessions": "Session"
+      "sessions": "Session",
+      "notifications": "Notification",
+      "notifySettings": "NotificationSettings",
+      "pushSubscriptions": "PushSubscription"
     },
     "FamilyClaim": {
       "user": "User",
@@ -133,6 +141,15 @@ export const FIELD_MAP: FieldMap = {
       "reviewedBy": "User"
     },
     "Session": {
+      "user": "User"
+    },
+    "Notification": {
+      "user": "User"
+    },
+    "NotificationSettings": {
+      "user": "User"
+    },
+    "PushSubscription": {
       "user": "User"
     }
   }

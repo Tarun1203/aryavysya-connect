@@ -12,6 +12,7 @@ import { normalizePhone } from "@/lib/otp";
 import { clientIp } from "@/lib/ip";
 import { blocked, clear, hit, hitAll, RULES } from "@/lib/ratelimit";
 import { worst } from "@/lib/ratelimit-core";
+import { claimDeciders, notify } from "@/lib/notify";
 
 // Checked against when the email is unknown, so a wrong email takes as long as a wrong password
 let decoyHash: Promise<string> | undefined;
@@ -125,6 +126,8 @@ export async function registerAction(_: FormState, fd: FormData): Promise<FormSt
   for (const purpose of ["MEMBERSHIP", "FAMILY_TREE"] as const) {
     await recordConsent({ purpose, basis: "SELF", userId: user.id, givenById: user.id });
   }
+  // The administrators who can endorse or decide it hear about the new request
+  await notify(await claimDeciders({ districtId: d.districtId, organizationId: org?.id ?? null }), "CLAIM_SUBMITTED", { name: `${d.givenName} ${d.surname}` }, "/admin", user.id);
   await startSession(user.id);
   redirect({ href: "/account", locale });
 }
