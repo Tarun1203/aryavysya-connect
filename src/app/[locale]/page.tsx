@@ -5,10 +5,11 @@ import { Link } from "@/i18n/navigation";
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { canView } from "@/lib/permissions";
-import { gotraLabel } from "@/lib/reference";
+import { gotraLabel, kulaLabels } from "@/lib/reference";
 import { buttonClass, Eyebrow, Notice } from "@/components/ui";
 import { HeroTree } from "@/components/landing/HeroTree";
-import { CountUp, Reveal, SpotlightCard, Timeline } from "@/components/landing/motion";
+import { CountUp, Reveal, SpotlightCard, Timeline, WordReveal } from "@/components/landing/motion";
+import { Sparks } from "@/components/landing/Sparks";
 
 const icon3d = (name: string, size = 64, className = "") => <Image src={`/icons/3d/${name}.png`} alt="" width={size} height={size} className={className} />;
 
@@ -30,6 +31,8 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
     db.gotra.findMany({ orderBy: [{ no: { sort: "asc", nulls: "last" } }, { name: "asc" }], take: 40 }),
   ]);
   const gotraNames = gotras.map((g) => gotraLabel(g, locale)!);
+  // The kula names (sankethanamas) of those gotras, for the second ribbon
+  const kulaNames = gotras.flatMap((g) => kulaLabels(g, locale)).slice(0, 60);
 
   const features = [
     { n: 1, icon: "shield", span: "lg:col-span-2" },
@@ -63,7 +66,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
 
         <div className="flex flex-col items-start gap-6">
           <Reveal>
-            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/70 py-1 pl-1 pr-3 text-xs font-medium shadow-soft backdrop-blur">
+            <span className="glass inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-3 text-xs font-medium">
               <span className="rounded-full bg-gradient-to-r from-brand to-accent px-2 py-0.5 text-[11px] font-semibold text-white">ॐ</span>
               {t("eyebrow")}
             </span>
@@ -102,7 +105,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
               </>
             ) : null}
           </Reveal>
-          <Reveal delay={0.4} className="mt-2 grid w-full max-w-lg grid-cols-3 divide-x divide-line rounded-2xl border border-line bg-surface/70 shadow-soft backdrop-blur">
+          <Reveal delay={0.4} className="glass mt-2 grid w-full max-w-lg grid-cols-3 divide-x divide-line rounded-2xl">
             {stats.map((s) => (
               <div key={s.label} className="px-4 py-3">
                 <div className="font-display text-2xl font-semibold text-brand sm:text-3xl">
@@ -114,7 +117,9 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           </Reveal>
         </div>
 
-        <Reveal delay={0.15} y={30}>
+        <Reveal delay={0.15} y={30} className="relative">
+          {/* Embers rising around the tree, pushed aside by the pointer */}
+          <Sparks className="absolute -inset-8 -z-10 h-[calc(100%+4rem)] w-[calc(100%+4rem)]" />
           <HeroTree />
         </Reveal>
       </section>
@@ -133,13 +138,25 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
             ))}
           </ul>
         </div>
+        {/* Their kula names drift the other way, quieter */}
+        {kulaNames.length > 0 && (
+          <div aria-hidden className="mt-3 flex overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_10%,#000_90%,transparent)]">
+            <ul className="animate-marquee-reverse flex shrink-0 gap-2 pr-2 hover:[animation-play-state:paused]">
+              {[...kulaNames, ...kulaNames].map((k, i) => (
+                <li key={i} className="whitespace-nowrap rounded-full px-3 py-1 text-xs text-muted ring-1 ring-line/70">
+                  {k}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </Bleed>
 
       {/* ---------- Features bento ---------- */}
       <section id="features" className="scroll-mt-28">
         <Reveal className="mx-auto mb-12 flex max-w-2xl flex-col items-center gap-3 text-center">
           <Eyebrow>{t("featuresEyebrow")}</Eyebrow>
-          <h2 className="text-3xl font-semibold sm:text-4xl">{t("featuresTitle")}</h2>
+          <WordReveal text={t("featuresTitle")} className="text-3xl font-semibold sm:text-4xl" />
           <p className="text-muted">{t("featuresSub")}</p>
         </Reveal>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -166,7 +183,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       <section id="how" className="scroll-mt-28">
         <Reveal className="mx-auto mb-14 flex max-w-2xl flex-col items-center gap-3 text-center">
           <Eyebrow>{t("howEyebrow")}</Eyebrow>
-          <h2 className="text-3xl font-semibold sm:text-4xl">{t("howTitle")}</h2>
+          <WordReveal text={t("howTitle")} className="text-3xl font-semibold sm:text-4xl" />
         </Reveal>
         <Timeline
           steps={[
@@ -187,7 +204,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
               {icon3d("lock", 140, "relative animate-float drop-shadow-2xl")}
             </div>
             <div className="relative flex flex-col gap-4">
-              <h2 className="text-3xl font-semibold">{t("privacyTitle")}</h2>
+              <WordReveal text={t("privacyTitle")} className="text-3xl font-semibold" />
               <p className="max-w-2xl leading-relaxed text-muted">{t("privacyBody")}</p>
               <ul className="flex flex-wrap gap-2">
                 {[t("privacy1"), t("privacy2"), t("privacy3")].map((p) => (
@@ -219,7 +236,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
                     </span>
                   ))}
                 </div>
-                <h2 className="text-3xl font-semibold sm:text-5xl">{t("ctaTitle")}</h2>
+                <WordReveal text={t("ctaTitle")} className="text-3xl font-semibold sm:text-5xl" />
                 <p className="text-lg text-white/85">{t("ctaBody")}</p>
                 <div className="mt-2 flex flex-wrap justify-center gap-3">
                   {user ? (

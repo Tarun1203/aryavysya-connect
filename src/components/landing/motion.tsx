@@ -19,6 +19,39 @@ export function Reveal({ children, delay = 0, className = "", y = 18 }: { childr
 }
 
 /**
+ * A heading that writes itself in: each word rises from a soft blur, one after another, the first
+ * time it scrolls into view. Words, not letters, so Telugu, Kannada and Tamil stay whole. Readers
+ * and search engines get the plain text; reduced motion shows it at once.
+ */
+export function WordReveal({ text, className = "", as: Tag = "h2", delay = 0 }: { text: string; className?: string; as?: "h1" | "h2" | "h3" | "p"; delay?: number }) {
+  // The same markup either way (so server and browser agree); reduced motion only makes it instant
+  const reduced = useReducedMotion();
+  const words = text.split(/(\s+)/);
+  let n = 0;
+  return (
+    <Tag className={className} aria-label={text}>
+      {words.map((w, i) =>
+        /^\s+$/.test(w) ? (
+          w
+        ) : (
+          <span key={i} aria-hidden className="inline-block overflow-hidden pb-[0.12em] align-bottom">
+            <motion.span
+              className="inline-block"
+              initial={{ y: "70%", opacity: 0, filter: "blur(8px)" }}
+              whileInView={{ y: "0%", opacity: 1, filter: "blur(0px)" }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={reduced ? { duration: 0 } : { duration: 0.75, delay: delay + 0.07 * n++, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {w}
+            </motion.span>
+          </span>
+        ),
+      )}
+    </Tag>
+  );
+}
+
+/**
  * Counts up from 0 once visible, formatted for the page's language. The page itself carries the
  * real number, so search engines, link previews and visitors without JavaScript never see 0.
  */
