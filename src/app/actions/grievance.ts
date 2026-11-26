@@ -9,6 +9,7 @@ import { adminScope, audit } from "@/lib/permissions";
 import { str, type FormState } from "@/lib/forms";
 import { GRIEVANCE_DAYS } from "@/lib/legal";
 import { hashIp } from "@/lib/otp";
+import { notify } from "@/lib/notify";
 import type { GrievanceKind, GrievanceStatus } from "@/generated/prisma/client";
 
 const KINDS = ["ACCESS", "CORRECTION", "ERASURE", "CONSENT", "NOMINATION", "CHILD_SAFETY", "COMPLAINT", "OTHER"] as const;
@@ -53,8 +54,10 @@ export async function respondGrievanceAction(id: string, _: FormState, fd: FormD
   if (!status || !["OPEN", "IN_PROGRESS", "RESOLVED"].includes(status)) return { error: t("formRequired") };
   const response = str(fd, "response");
   if (status === "RESOLVED" && !response) return { error: t("responseRequired") };
-  await db.grievance.update({ where: { id }, data: { status, response, respondedById: user!.id, respondedAt: new Date() } });
+  const g = await db.grievance.update({ where: { id }, data: { status, response, respondedById: user!.id, respondedAt: new Date() } });
   await audit(user, `grievance-${status.toLowerCase()}`, "Grievance", id);
+  // A signed-in member who raised it hears that there is an answer (the answer itself is in the site)
+  if (response) await notify([g.userId], "GRIEVANCE_RESPONDED", { ref: `G-${String(g.number).padStart(6, "0")}` }, "/notifications", user!.id);
   revalidatePath("/", "layout");
   return { ok: true };
 }

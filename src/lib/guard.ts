@@ -3,6 +3,13 @@ import { redirect } from "@/i18n/navigation";
 import { currentUser, type SessionUser } from "@/lib/auth";
 import { canView, isAdmin } from "@/lib/permissions";
 
+/** Anyone signed in, approved or not (their own notifications, account): others go to login. */
+export async function requireSignedIn(locale: string): Promise<SessionUser> {
+  const user = await currentUser();
+  if (!user) redirect({ href: "/login", locale });
+  return user!;
+}
+
 /** Verified members only: signed-out visitors go to login, pending users to their account page. */
 export async function requireViewer(locale: string): Promise<SessionUser> {
   const user = await currentUser();

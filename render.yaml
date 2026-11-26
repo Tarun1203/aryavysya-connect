@@ -42,3 +42,16 @@ services:
         sync: false
       - key: GRIEVANCE_PHONE # optional
         sync: false
+      # Notifications: email over your own SMTP account (both needed), and browser push (npm run push:keys)
+      - key: SMTP_URL
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: SITE_URL
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
