@@ -15,6 +15,7 @@ import { ConsentCard } from "@/components/ConsentCard";
 import { ChangeRequestList, requestInclude } from "@/components/ChangeRequestList";
 import { editNeedsReview, isReviewer, openDisputes } from "@/lib/review";
 import { disputeAction, verifyLinkAction, verifyPersonAction } from "@/app/actions/review";
+import { reportPersonAction } from "@/app/actions/report";
 import { respondMarriageAction, updateMarriageAction } from "@/app/actions/marriage";
 import Image from "next/image";
 import { Badge, buttonClass, Card, Notice, Textarea } from "@/components/ui";
@@ -63,6 +64,7 @@ export default async function PersonPage({ params, searchParams }: PageProps<"/[
   ]);
   const consent = person.isLiving ? await consentPanel(user, id) : null;
   const tr = await getTranslations("review");
+  const tmod = await getTranslations("moderation");
   const [reviewer, needsReview, disputes, requests] = await Promise.all([
     isReviewer(user, id),
     editNeedsReview(user, id),
@@ -389,6 +391,27 @@ export default async function PersonPage({ params, searchParams }: PageProps<"/[
             <Textarea name="reason" required placeholder={tr("reasonPlaceholder")} />
             <Textarea name="correction" placeholder={tr("correctionPlaceholder")} />
             <Textarea name="evidence" placeholder={tr("evidencePlaceholder")} />
+          </ActionForm>
+        </details>
+        {/* Not a correction but something wrong with the record itself: to the moderators */}
+        <details className="rounded-xl border border-line p-3">
+          <summary className="cursor-pointer text-sm font-medium text-muted hover:text-brand">{tmod("reportThis")}</summary>
+          <ActionForm action={reportPersonAction.bind(null, id)} submit={tmod("send")} className="mt-3 flex flex-col gap-3" resetOnSave>
+            <p className="text-xs text-muted">{tmod("reportIntro")}</p>
+            <label className="flex flex-col gap-1 text-sm">
+              {tmod("reason")}
+              <select name="reason" required defaultValue="" className="rounded-xl border border-line bg-background px-3 py-2">
+                <option value="" disabled>
+                  {tmod("chooseReason")}
+                </option>
+                {(["OFFENSIVE", "FAKE", "PRIVACY", "CHILD_SAFETY", "OTHER"] as const).map((r) => (
+                  <option key={r} value={r}>
+                    {tmod(`reason_${r}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Textarea name="note" maxLength={1000} placeholder={tmod("notePlaceholder")} />
           </ActionForm>
         </details>
       </Card>

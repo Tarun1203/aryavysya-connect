@@ -13,6 +13,7 @@ import { clientIp } from "@/lib/ip";
 import { blocked, clear, hit, hitAll, RULES } from "@/lib/ratelimit";
 import { worst } from "@/lib/ratelimit-core";
 import { claimDeciders, notify } from "@/lib/notify";
+import { blockedMessage, checkInput } from "@/lib/moderation";
 
 // Checked against when the email is unknown, so a wrong email takes as long as a wrong password
 let decoyHash: Promise<string> | undefined;
@@ -80,6 +81,9 @@ export async function registerAction(_: FormState, fd: FormData): Promise<FormSt
   });
   if (!parsed.success) return { error: t("errors.required") };
   const d = parsed.data;
+  // Abusive words are refused (the administrator reviewing the request sees the rest)
+  const words = checkInput({ name: d.name, givenName: d.givenName, surname: d.surname, fatherName: d.fatherName, motherName: d.motherName, nativePlace: d.nativePlace, note: d.note });
+  if (words.blocked.length) return { error: blockedMessage(t, words.blocked) };
   const regLimit = await hitAll([
     [RULES.registerIp, await clientIp()],
     [RULES.registerGlobal, "all"],

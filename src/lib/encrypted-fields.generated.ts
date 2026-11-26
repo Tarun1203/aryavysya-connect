@@ -17,6 +17,10 @@ export const FIELD_MAP: FieldMap = {
       "endpoint": "deterministic",
       "p256dh": "randomized",
       "auth": "randomized"
+    },
+    "Report": {
+      "note": "randomized",
+      "resolution": "randomized"
     }
   },
   "relations": {
@@ -79,6 +83,8 @@ export const FIELD_MAP: FieldMap = {
       "otpChallenges": "OtpChallenge",
       "sessions": "Session",
       "notifications": "Notification",
+      "reportsFiled": "Report",
+      "reportsResolved": "Report",
       "notifySettings": "NotificationSettings",
       "pushSubscriptions": "PushSubscription"
     },
@@ -108,7 +114,8 @@ export const FIELD_MAP: FieldMap = {
       "photo": "PersonPhoto",
       "claims": "FamilyClaim",
       "consents": "Consent",
-      "changeRequests": "ChangeRequest"
+      "changeRequests": "ChangeRequest",
+      "reports": "Report"
     },
     "ParentChild": {
       "parent": "Person",
@@ -151,6 +158,11 @@ export const FIELD_MAP: FieldMap = {
     },
     "PushSubscription": {
       "user": "User"
+    },
+    "Report": {
+      "person": "Person",
+      "reporter": "User",
+      "resolvedBy": "User"
     }
   }
 };

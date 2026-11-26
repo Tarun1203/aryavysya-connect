@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { KINDS, channelsFor, escapeHtml, groupOf, safeLink } from "./notify-core";
 
 test("every kind belongs to one group", () => {
-  assert.deepEqual(KINDS.filter((k) => groupOf(k) === "requests"), ["CLAIM_SUBMITTED", "CHANGE_PROPOSED", "MARRIAGE_PROPOSED"]);
+  assert.deepEqual(KINDS.filter((k) => groupOf(k) === "requests"), ["CLAIM_SUBMITTED", "CHANGE_PROPOSED", "MARRIAGE_PROPOSED", "REPORT_FILED"]);
   assert.equal(groupOf("CLAIM_APPROVED"), "decisions");
 });
 
