@@ -10,6 +10,7 @@ import { familyScope } from "@/lib/family";
 import { isReviewer } from "@/lib/review";
 import type { SessionUser } from "@/lib/auth";
 import { hit, RULES } from "@/lib/ratelimit";
+import { notificationsChanged } from "@/lib/realtime";
 import { channelsFor, escapeHtml, outsideKey, safeLink, type Kind } from "@/lib/notify-core";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -46,6 +47,8 @@ export async function notify(userIds: (string | null | undefined)[], kind: Kind,
     data: to.map((userId) => ({ userId, kind, data: data as Prisma.InputJsonValue, link: safeLink(link) })),
     select: { id: true },
   });
+  // Open pages update their bell straight away
+  await notificationsChanged(to, actorId);
   const origin = await siteUrl();
   after(() => deliver(rows.map((r) => r.id), origin).catch((e) => console.error("notification delivery failed:", e instanceof Error ? e.message : e)));
   if (randomInt(0, 200) === 0) after(() => db.notification.deleteMany({ where: { createdAt: { lt: new Date(Date.now() - RETENTION_DAYS * 86400e3) } } }).then(() => undefined));

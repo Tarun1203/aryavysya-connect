@@ -17,6 +17,7 @@ import { privateIds, privateViewer } from "@/lib/consent";
 import { diff, editNeedsReview, unlinkNeedsReview } from "@/lib/review";
 import { changeDeciders, familyOf, notify } from "@/lib/notify";
 import { blockedMessage, checkInput, fileFilterReports, personText } from "@/lib/moderation";
+import { peopleChanged } from "@/lib/realtime";
 import type { Prisma } from "@/generated/prisma/client";
 
 export async function updatePersonAction(personId: string, _: FormState, fd: FormData): Promise<FormState> {
@@ -47,6 +48,7 @@ export async function updatePersonAction(personId: string, _: FormState, fd: For
   await db.person.update({ where: { id: personId }, data: { ...data, updatedById: user!.id } });
   await syncAround(personId);
   await fileFilterReports(personId, words.review, user!.id);
+  await peopleChanged([personId], user!.id);
   const changed = Object.fromEntries(
     Object.entries(data).filter(([k, v]) => before[k as keyof typeof before] !== v).map(([k, v]) => [k, { from: before[k as keyof typeof before], to: v }])
   );
@@ -128,6 +130,7 @@ export async function addRelativeAction(anchorId: string, relation: Relation, _:
   await syncAround(person.id);
   await syncAround(anchorId);
   await fileFilterReports(person.id, words.review, user!.id);
+  await peopleChanged([person.id, anchorId, coParentId], user!.id);
   await audit(user, `add-${relation}`, "Person", person.id, { anchorId, coParentId, confirmedDespiteMatches: confirmed || undefined });
   revalidatePath("/", "layout");
   redirect({ href: `/person/${person.id}`, locale: await getLocale() });
@@ -181,6 +184,7 @@ export async function linkExistingAction(anchorId: string, relation: Relation, _
   }
   await syncAround(anchorId);
   await syncAround(otherId);
+  await peopleChanged([anchorId, otherId], user!.id);
   if (proposed) {
     // The other family answers: the person and their relatives who may edit them
     const [a, b] = await Promise.all([anchorId, otherId].map((id) => db.person.findUnique({ where: { id }, select: { givenName: true, surname: true } })));
@@ -227,6 +231,7 @@ export async function removeLinkAction(kind: "parentChild" | "couple", linkId: s
   await syncAround(link[0]);
   await syncAround(link[1]);
   await audit(user, `unlink-${kind}`, "Person", link[0], { other: link[1] });
+  await peopleChanged(link, user!.id);
   revalidatePath("/", "layout");
   redirect({ href: `/person/${returnTo}`, locale: await getLocale() });
 }

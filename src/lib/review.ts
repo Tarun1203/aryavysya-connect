@@ -3,6 +3,7 @@ import { db } from "./db";
 import type { SessionUser } from "./auth";
 import { audit, canEditPerson, isAdmin } from "./permissions";
 import { syncAround } from "./gotra";
+import { peopleChanged } from "./realtime";
 import type { ChangeRequest, Prisma } from "@/generated/prisma/client";
 
 /**
@@ -87,6 +88,7 @@ export async function applyEdit(req: ChangeRequest, reviewer: SessionUser) {
   await db.person.update({ where: { id: req.personId }, data: { ...data, updatedById: req.proposedById ?? reviewer.id } });
   await syncAround(req.personId);
   await audit(reviewer, "update", "Person", req.personId, { ...changes, changeRequest: req.id });
+  await peopleChanged([req.personId], reviewer.id);
 }
 
 /** Remove the link a request is about (an approved unlink, or an upheld dispute). */
@@ -102,6 +104,7 @@ export async function removeLink(req: ChangeRequest, reviewer: SessionUser) {
   await syncAround(ends[0]);
   await syncAround(ends[1]);
   await audit(reviewer, `unlink-${req.linkKind}`, "Person", ends[0], { other: ends[1], changeRequest: req.id });
+  await peopleChanged(ends, reviewer.id);
 }
 
 /** Open disputes, for the "Disputed" badges: people disputed, and links disputed. */
