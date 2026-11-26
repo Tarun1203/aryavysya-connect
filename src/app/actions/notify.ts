@@ -10,6 +10,7 @@ import { currentUser } from "@/lib/auth";
 import { audit } from "@/lib/permissions";
 import { deviceLabel } from "@/lib/device";
 import { safeLink } from "@/lib/notify-core";
+import { notificationsChanged } from "@/lib/realtime";
 import type { FormState } from "@/lib/forms";
 
 /** Open a notification: mark it read and go where it leads (or stay on the list). */
@@ -18,7 +19,11 @@ export async function openNotificationAction(id: string) {
   if (!user) return;
   const n = await db.notification.findFirst({ where: { id, userId: user.id } });
   if (!n) return;
-  if (!n.readAt) await db.notification.update({ where: { id }, data: { readAt: new Date() } });
+  if (!n.readAt) {
+    await db.notification.update({ where: { id }, data: { readAt: new Date() } });
+    // The member's other tabs and devices update their bell too
+    await notificationsChanged([user.id], user.id);
+  }
   revalidatePath("/", "layout");
   redirect({ href: safeLink(n.link) ?? "/notifications", locale: await getLocale() });
 }
@@ -27,6 +32,7 @@ export async function markAllReadAction() {
   const user = await currentUser();
   if (!user) return;
   await db.notification.updateMany({ where: { userId: user.id, readAt: null }, data: { readAt: new Date() } });
+  await notificationsChanged([user.id], user.id);
   revalidatePath("/", "layout");
 }
 

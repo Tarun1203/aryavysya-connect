@@ -959,5 +959,12 @@
     "dismiss": "Dismiss – nothing wrong",
     "resolutionPlaceholder": "What was done (sent to the reporter)",
     "decide": "Save decision"
+  },
+  "live": {
+    "newNotification": "You have a new notification",
+    "open": "Open",
+    "dismiss": "Close",
+    "recordChanged": "Someone has just changed this record.",
+    "refresh": "Show the changes"
   }
 }

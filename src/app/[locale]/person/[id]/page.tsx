@@ -16,6 +16,7 @@ import { ChangeRequestList, requestInclude } from "@/components/ChangeRequestLis
 import { editNeedsReview, isReviewer, openDisputes } from "@/lib/review";
 import { disputeAction, verifyLinkAction, verifyPersonAction } from "@/app/actions/review";
 import { reportPersonAction } from "@/app/actions/report";
+import { RecordChanged } from "@/components/Live";
 import { respondMarriageAction, updateMarriageAction } from "@/app/actions/marriage";
 import Image from "next/image";
 import { Badge, buttonClass, Card, Notice, Textarea } from "@/components/ui";
@@ -144,6 +145,8 @@ export default async function PersonPage({ params, searchParams }: PageProps<"/[
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Someone else changed this record while it was open */}
+      <RecordChanged personId={id} me={user.id} />
       {/* Profile header: photo (or a 3D figure), names and record details */}
       <div className="relative overflow-hidden rounded-[1.75rem] border border-line bg-surface shadow-soft">
         <div aria-hidden className="absolute inset-x-0 top-0 h-20 bg-gradient-to-r from-[#5e1a0e] via-[#a3341f] to-[#c77d12]">

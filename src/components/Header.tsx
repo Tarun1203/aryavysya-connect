@@ -6,6 +6,7 @@ import { canView, isAdmin } from "@/lib/permissions";
 import { logoutAction } from "@/app/actions/auth";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Navbar } from "./Navbar";
+import { LiveBell } from "./Live";
 import { buttonClass } from "./ui";
 
 export async function Header() {
@@ -73,5 +74,11 @@ export async function Header() {
     </>
   );
 
-  return <Navbar brand={t("app.name")} links={links} actions={actions} menuLabel={t("nav.menu")} />;
+  return (
+    <>
+      <Navbar brand={t("app.name")} links={links} actions={actions} menuLabel={t("nav.menu")} />
+      {/* Once, outside the menu (which repeats the actions on phones): keeps the bell live */}
+      {user && <LiveBell me={user.id} />}
+    </>
+  );
 }

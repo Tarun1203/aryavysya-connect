@@ -8,6 +8,7 @@ import { partialDate, str } from "@/lib/forms";
 import { marriageCheck } from "@/lib/marriage";
 import { syncAround } from "@/lib/gotra";
 import { notify } from "@/lib/notify";
+import { peopleChanged } from "@/lib/realtime";
 import type { MarriageStatus } from "@/generated/prisma/client";
 
 /**
@@ -31,6 +32,7 @@ export async function respondMarriageAction(coupleId: string, accept: boolean) {
   await audit(user, accept ? "accept-marriage" : "decline-marriage", "Person", c.person2Id, { other: c.person1Id, coupleId, proposedById: c.proposedById });
   const other = await db.person.findUnique({ where: { id: c.person2Id }, select: { givenName: true, surname: true } });
   await notify([c.proposedById], accept ? "MARRIAGE_ACCEPTED" : "MARRIAGE_DECLINED", { name: other ? `${other.givenName} ${other.surname}` : "" }, `/person/${c.person1Id}`, user!.id);
+  await peopleChanged([c.person1Id, c.person2Id], user!.id);
   revalidatePath("/", "layout");
 }
 
