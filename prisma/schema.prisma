@@ -309,6 +309,8 @@ model User {
   otpChallenges      OtpChallenge[]
   sessions           Session[]
   notifications      Notification[]
+  reportsFiled       Report[]              @relation("ReportReporter")
+  reportsResolved    Report[]              @relation("ReportResolver")
   notifySettings     NotificationSettings?
   pushSubscriptions  PushSubscription[]
 }
@@ -431,6 +433,7 @@ model Person {
   claims         FamilyClaim[]
   consents       Consent[]
   changeRequests ChangeRequest[]
+  reports        Report[]
 
   @@index([surname, givenName])
   @@index([gotraId])
@@ -706,6 +709,8 @@ enum NotificationKind {
   MARRIAGE_ACCEPTED
   MARRIAGE_DECLINED
   GRIEVANCE_RESPONDED
+  REPORT_FILED // a report about a record, for its moderators
+  REPORT_RESOLVED
 }
 
 /// One notification for one member (src/lib/notify.ts). Kept for 180 days.
@@ -757,4 +762,54 @@ model PushSubscription {
   lastUsedAt DateTime?
 
   @@index([userId])
+}
+
+enum ReportReason {
+  OFFENSIVE // abusive or insulting words
+  FAKE // not a real person, or someone pretending to be another
+  PRIVACY // details that shouldn't be shown
+  CHILD_SAFETY
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportSource {
+  MEMBER // a member pressed "Report"
+  FILTER // the language filter flagged a word for a moderator (src/lib/moderation-core.ts)
+}
+
+/// Something wrong with a record, for the administrators over that person to look at
+/// (src/lib/moderation.ts). The reporter is shown to moderators only.
+model Report {
+  id           String       @id @default(cuid())
+  /// Shown as R-000123
+  number       Int          @unique @default(autoincrement())
+  source       ReportSource
+  reason       ReportReason
+  status       ReportStatus @default(OPEN)
+  personId     String
+  person       Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+  /// The field the filter flagged, and the words it matched (never the whole text)
+  field        String?
+  terms        String[]     @default([])
+  /// The reporter's words
+  /// @encrypted
+  note         String?
+  reporterId   String?
+  reporter     User?        @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  resolvedById String?
+  resolvedBy   User?        @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedAt   DateTime?
+  /// What the moderator did, told to the reporter
+  /// @encrypted
+  resolution   String?
+  createdAt    DateTime     @default(now())
+
+  @@index([status, createdAt])
+  @@index([personId])
 }

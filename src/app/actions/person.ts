@@ -16,6 +16,7 @@ import { mergePeople, mergeProblem } from "@/lib/merge";
 import { privateIds, privateViewer } from "@/lib/consent";
 import { diff, editNeedsReview, unlinkNeedsReview } from "@/lib/review";
 import { changeDeciders, familyOf, notify } from "@/lib/notify";
+import { blockedMessage, checkInput, fileFilterReports, personText } from "@/lib/moderation";
 import type { Prisma } from "@/generated/prisma/client";
 
 export async function updatePersonAction(personId: string, _: FormState, fd: FormData): Promise<FormState> {
@@ -24,6 +25,9 @@ export async function updatePersonAction(personId: string, _: FormState, fd: For
   if (!(await canEditPerson(user, personId))) return { error: t("person.notAllowed") };
   const parsed = personFields(fd);
   if (!parsed.success) return { error: t("errors.required") };
+  // Abusive words are refused; words that may be innocent are saved and shown to a moderator
+  const words = checkInput({ ...personText(parsed.data), reason: str(fd, "reason") });
+  if (words.blocked.length) return { error: blockedMessage(t, words.blocked) };
 
   const before = await db.person.findUniqueOrThrow({ where: { id: personId } });
   const data = await cleanPlaces(parsed.data);
@@ -36,11 +40,13 @@ export async function updatePersonAction(personId: string, _: FormState, fd: For
     const req = await db.changeRequest.create({ data: { kind: "EDIT", personId, changes: changes as Prisma.InputJsonValue, reason, proposedById: user!.id } });
     await audit(user, "propose-edit", "Person", personId, { changeRequest: req.id, fields: Object.keys(changes) });
     await notify(await changeDeciders(personId, "EDIT"), "CHANGE_PROPOSED", { name: `${before.givenName} ${before.surname}`, by: user!.name }, `/person/${personId}`, user!.id);
+    await fileFilterReports(personId, words.review, user!.id);
     revalidatePath("/", "layout");
     redirect({ href: `/person/${personId}?proposed=1`, locale: await getLocale() });
   }
   await db.person.update({ where: { id: personId }, data: { ...data, updatedById: user!.id } });
   await syncAround(personId);
+  await fileFilterReports(personId, words.review, user!.id);
   const changed = Object.fromEntries(
     Object.entries(data).filter(([k, v]) => before[k as keyof typeof before] !== v).map(([k, v]) => [k, { from: before[k as keyof typeof before], to: v }])
   );
@@ -58,6 +64,8 @@ export async function addRelativeAction(anchorId: string, relation: Relation, _:
   if (!(await canAddRelative(user, anchorId, relation, coParentId))) return { error: t("person.outOfScope") };
   const parsed = personFields(fd);
   if (!parsed.success) return { error: t("errors.required") };
+  const words = checkInput(personText(parsed.data));
+  if (words.blocked.length) return { error: blockedMessage(t, words.blocked) };
   // A living child needs a birth year: without one we can't tell whether they are a minor
   if (relation === "child" && parsed.data.isLiving && !parsed.data.birthDate) return { error: t("person.birthYearForChild") };
   if (relation === "parent" && (await db.parentChild.count({ where: { childId: anchorId } })) >= 2) return { error: t("person.twoParents") };
@@ -119,6 +127,7 @@ export async function addRelativeAction(anchorId: string, relation: Relation, _:
   });
   await syncAround(person.id);
   await syncAround(anchorId);
+  await fileFilterReports(person.id, words.review, user!.id);
   await audit(user, `add-${relation}`, "Person", person.id, { anchorId, coParentId, confirmedDespiteMatches: confirmed || undefined });
   revalidatePath("/", "layout");
   redirect({ href: `/person/${person.id}`, locale: await getLocale() });

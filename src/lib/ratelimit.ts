@@ -40,6 +40,8 @@ export const RULES = {
   gedcomExport: { name: "gedcom:export", limit: 20, windowSec: HOUR, backoff: steady },
   // Notification emails per member: a busy day on the site can't flood an inbox
   notifyEmail: { name: "notify:email", limit: 20, windowSec: HOUR },
+  // Reports by one member: plenty for real problems, not enough to flood the moderators
+  reportMember: { name: "report:member", limit: 10, windowSec: DAY, backoff: { baseSec: HOUR, maxSec: DAY, decaySec: DAY } },
 } satisfies Record<string, Rule>;
 
 function keyFor(rule: Rule, subject: string) {

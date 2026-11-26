@@ -8,6 +8,7 @@ import { audit, canView } from "@/lib/permissions";
 import { str, type FormState } from "@/lib/forms";
 import { applyEdit, canReview, isReviewer, removeLink } from "@/lib/review";
 import { changeDeciders, notify } from "@/lib/notify";
+import { blockedMessage, checkInput, fileFilterReports } from "@/lib/moderation";
 
 const done = (): FormState => {
   revalidatePath("/", "layout");
@@ -25,6 +26,8 @@ export async function disputeAction(personId: string, _: FormState, fd: FormData
   if (!canView(user)) return { error: t("notAllowed") };
   const reason = str(fd, "reason");
   if (!reason) return { error: t("reasonRequired") };
+  const words = checkInput({ reason, correction: str(fd, "correction"), evidence: str(fd, "evidence") });
+  if (words.blocked.length) return { error: blockedMessage(await getTranslations(), words.blocked) };
   const [kind, linkId] = (str(fd, "subject") ?? "person").split(":");
   // The link must really belong to this person
   if (linkId) {
@@ -50,6 +53,7 @@ export async function disputeAction(personId: string, _: FormState, fd: FormData
   });
   await audit(user, "dispute", "Person", personId, { changeRequest: req.id, linkId });
   const subject = await db.person.findUnique({ where: { id: personId }, select: { givenName: true, surname: true } });
+  await fileFilterReports(personId, words.review, user!.id);
   await notify(await changeDeciders(personId, "DISPUTE"), "CHANGE_PROPOSED", { name: subject ? `${subject.givenName} ${subject.surname}` : "", by: user!.name }, `/person/${personId}`, user!.id);
   return done();
 }

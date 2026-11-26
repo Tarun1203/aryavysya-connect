@@ -4,7 +4,7 @@
  *
  * Two groups, each with its own email and push switch:
  *  - "requests": something waits for this member's decision (a membership request, a proposed edit
- *    or dispute, a marriage proposed by another family)
+ *    or dispute, a marriage proposed by another family, a report to moderate)
  *  - "decisions": the answer to something they asked for
  * The in-app feed always shows everything.
  *
@@ -25,11 +25,13 @@ export const KINDS = [
   "MARRIAGE_ACCEPTED",
   "MARRIAGE_DECLINED",
   "GRIEVANCE_RESPONDED",
+  "REPORT_FILED",
+  "REPORT_RESOLVED",
 ] as const;
 export type Kind = (typeof KINDS)[number];
 export type Group = "requests" | "decisions";
 
-const REQUESTS = new Set<Kind>(["CLAIM_SUBMITTED", "CHANGE_PROPOSED", "MARRIAGE_PROPOSED"]);
+const REQUESTS = new Set<Kind>(["CLAIM_SUBMITTED", "CHANGE_PROPOSED", "MARRIAGE_PROPOSED", "REPORT_FILED"]);
 export const groupOf = (kind: Kind): Group => (REQUESTS.has(kind) ? "requests" : "decisions");
 
 export type Settings = { emailRequests: boolean; emailDecisions: boolean; pushRequests: boolean; pushDecisions: boolean };
