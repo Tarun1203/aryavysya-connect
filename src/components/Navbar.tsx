@@ -28,7 +28,7 @@ export function Navbar({ brand, links, actions, menuLabel }: { brand: string; li
         animate={{ maxWidth: scrolled ? 1040 : 1200, y: scrolled ? 4 : 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 32 }}
         className={`pointer-events-auto mx-auto flex items-center gap-3 rounded-2xl border px-3 py-2 transition-[background-color,border-color,box-shadow] duration-300 ${
-          scrolled || open ? "border-line bg-surface/80 shadow-soft backdrop-blur-xl" : "border-transparent bg-transparent"
+          scrolled || open ? "glass" : "border-transparent bg-transparent"
         }`}
       >
         <Link href="/" className="flex min-w-0 items-center gap-2.5 rounded-xl pr-2" onClick={() => setOpen(false)}>
